@@ -3,6 +3,7 @@ import { ref, useTemplateRef } from "vue";
 import { Tiles } from '@/data/tiles'
 import TileDraggable from "@/components/TileDraggable.vue";
 import type {Tile} from "@/types.ts";
+import type {Position} from "@vueuse/core";
 
 const boardRef = useTemplateRef('board')
 const tiles = ref(
@@ -83,6 +84,13 @@ function shuffleAllTiles(arr: Array<Tile | undefined>) {
   }
 }
 
+function updateCoords(tile : Tile, position: Position) {
+  console.log(`Old coords - x: ${tile.x}, y: ${tile.y}`)
+  tile.x = position.x;
+  tile.y = position.y;
+  console.log(`New coords - x: ${tile.x}, y: ${tile.y}`)
+}
+
 </script>
 
 <template>
@@ -103,6 +111,7 @@ function shuffleAllTiles(arr: Array<Tile | undefined>) {
         @click="flipTile(tile)"
         @contextmenu.prevent="rotateTile(tile)"
         @pick="bringToFront(tile)"
+        @move="(position) => updateCoords(tile, position)"
     >
       <div
           class="tile-3d"
@@ -160,4 +169,14 @@ function shuffleAllTiles(arr: Array<Tile | undefined>) {
   background-image: url('/img/tiles/Back.svg');
   transform: rotateY(180deg);
 }
+
+.grid-board {
+  /*display: flex;*/
+}
+
+.wall {
+  display: grid;
+
+}
+
 </style>
