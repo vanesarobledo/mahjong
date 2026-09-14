@@ -35,6 +35,18 @@ function getInitializedPosition(index : number) {
   }
 }
 
+function handleClick(tile: Tile) {
+  flipTile(tile);
+}
+
+function handleContextMenu(tile: Tile) {
+  rotateTile(tile);
+}
+
+function handlePick(tile: Tile) {
+  bringToFront(tile);
+}
+
 function flipTile(tile : Tile) {
   tile.isFaceUp = !tile.isFaceUp
   tile.rotationY = tile.isFaceUp ? 0: 180
@@ -108,9 +120,9 @@ function updateCoords(tile : Tile, position: Position) {
         :initial-x="tile.x"
         :initial-y="tile.y"
         :prevent-default="true"
-        @click="flipTile(tile)"
-        @contextmenu.prevent="rotateTile(tile)"
-        @pick="bringToFront(tile)"
+        @click="handleClick(tile)"
+        @contextmenu.prevent="handleContextMenu(tile)"
+        @pick="handlePick(tile)"
         @move="(position) => updateCoords(tile, position)"
     >
       <div
