@@ -94,14 +94,23 @@ function handlePick(tile: Tile) {
 function handleTileMove(position: Position, tile: Tile) {
   updateCoords(tile, position)
 
-  if (activeDragId.value === tile.id && groupDragOrigin.value && dragStartPos.value) {
-    // compute dx/dy
-    let dx = position.x - dragStartPos.value.x
-    let dy = position.y - dragStartPos.value.y
+  if (activeDragId.value === tile.id && groupDragOrigin.value) {
+    selectedIds.value.forEach((id) => {
+      if (id === tile.id) {
+        return;
+      }
 
-    groupDragOrigin.value.forEach((pos) => {
-        pos.x += dx
-        pos.y += dy
+      let currentTile = tiles.value.find((t) => t.id === id)
+      let snapshotCoords = groupDragOrigin.value.get(id)
+
+      if (currentTile && snapshotCoords && dragStartPos.value) {
+        // compute dx/dy
+        let dx = position.x - dragStartPos.value.x
+        let dy = position.y - dragStartPos.value.y
+
+        currentTile.x = snapshotCoords.x + dx
+        currentTile.y = snapshotCoords.y + dy
+      }
     })
   }
 }
