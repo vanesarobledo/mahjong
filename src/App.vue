@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, useTemplateRef } from "vue";
+import {type Ref, ref, useTemplateRef} from "vue";
 import { Tiles } from '@/data/tiles'
 import TileDraggable from "@/components/TileDraggable.vue";
 import type {Tile} from "@/types.ts";
@@ -20,6 +20,13 @@ const tiles = ref(
     })
 )
 
+const selectedIds = ref(new Set<number>())
+const marquee = ref(null)
+
+const dragStartPos: Ref<Position | null> = ref(null)
+const activeDragId: Ref<number | null> = ref(null)
+const groupDragOrigin: Ref<Map<number, Position>> = ref(new Map<number, Position>)
+
 const TILE_WIDTH = 50, TILE_HEIGHT = 72
 const TILE_PADDING = 10
 const TILES_PER_ROW = 14
@@ -35,7 +42,22 @@ function getInitializedPosition(index : number) {
   }
 }
 
-function handleClick(tile: Tile) {
+function handleClick(e: any, tile: Tile) {
+  console.log('handleClick')
+  console.log([...selectedIds.value])
+  if (e.shiftKey) {
+    // toggle tile id in selectedId
+    if (selectedIds.value.has(tile.id)) {
+      selectedIds.value.delete(tile.id)
+      console.log(`removed selected id: ${tile.id}`)
+    }
+    else {
+      selectedIds.value.add(tile.id)
+      console.log(`added selected id: ${tile.id}`)
+    }
+    return;
+  }
+
   flipTile(tile);
 }
 
@@ -44,7 +66,59 @@ function handleContextMenu(tile: Tile) {
 }
 
 function handlePick(tile: Tile) {
+  console.log('handlePick')
+  console.log([...selectedIds.value])
+  // start of group drag
+  if (selectedIds.value.has(tile.id) && selectedIds.value.size > 1) {
+    console.log('in start of group drag')
+    // snapshot other selected tiles' current x/y in groupDragOrigin
+    dragStartPos.value = {
+      x: tile.x,
+      y: tile.y
+    }
+    activeDragId.value = tile.id
+    selectedIds.value.forEach((id) => {
+      if (id === tile.id) {
+        return;
+      }
+      groupDragOrigin.value.set(id, {
+        x: dragStartPos.value.x,
+        y: dragStartPos.value.y
+      })
+    })
+  }
+
   bringToFront(tile);
+}
+
+function handleTileMove(position: Position, tile: Tile) {
+  updateCoords(tile, position)
+
+  if (activeDragId.value === tile.id && groupDragOrigin.value && dragStartPos.value) {
+    // compute dx/dy
+    let dx = position.x - dragStartPos.value.x
+    let dy = position.y - dragStartPos.value.y
+
+    groupDragOrigin.value.forEach((pos) => {
+        pos.x += dx
+        pos.y += dy
+    })
+    //console.log(groupDragOrigin.value)
+  }
+}
+function handleOnEnd(e: any, tile: Tile) {
+  console.log('handleOnEnd')
+  console.log([...selectedIds.value])
+
+  activeDragId.value = null
+  groupDragOrigin.value = new Map<number, Position>()
+  dragStartPos.value = null
+
+  // collapse
+  if (!e.shiftKey && !selectedIds.value.has(tile.id) && selectedIds.value.size > 1) {
+      console.log('collapse')
+      selectedIds.value = new Set([tile.id])
+  }
 }
 
 function flipTile(tile : Tile) {
@@ -97,10 +171,8 @@ function shuffleAllTiles(arr: Array<Tile | undefined>) {
 }
 
 function updateCoords(tile : Tile, position: Position) {
-  console.log(`Old coords - x: ${tile.x}, y: ${tile.y}`)
   tile.x = position.x;
   tile.y = position.y;
-  console.log(`New coords - x: ${tile.x}, y: ${tile.y}`)
 }
 
 </script>
@@ -120,10 +192,11 @@ function updateCoords(tile : Tile, position: Position) {
         :initial-x="tile.x"
         :initial-y="tile.y"
         :prevent-default="true"
-        @click="handleClick(tile)"
+        @click="($event: any) => handleClick($event, tile)"
         @contextmenu.prevent="handleContextMenu(tile)"
         @pick="handlePick(tile)"
-        @move="(position) => updateCoords(tile, position)"
+        @move="(position) => handleTileMove(position, tile)"
+        @end="($event) => handleOnEnd($event, tile)"
     >
       <div
           class="tile-3d"

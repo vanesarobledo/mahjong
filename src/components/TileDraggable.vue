@@ -10,7 +10,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'pick'): void,
-  (e: 'move', position: Position): void
+  (e: 'move', position: Position): void,
+  (e: 'end', event: Event): void
 }>()
 
 const el = useTemplateRef('el')
@@ -19,7 +20,8 @@ const { x, y, position, style } = useDraggable(el, {
   containerElement: () => props.containerRef,
   preventDefault: true,
   onStart: () => emit('pick'),
-  onMove: (position) => emit('move', position)
+  onMove: (position) => emit('move', position),
+  onEnd: (position, event) => emit('end', event)
 })
 
 watch(
