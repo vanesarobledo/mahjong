@@ -43,8 +43,6 @@ function getInitializedPosition(index : number) {
 }
 
 function handleClick(e: any, tile: Tile) {
-  console.log('handleClick')
-  console.log([...selectedIds.value])
   if (e.shiftKey) {
     // toggle tile id in selectedId
     if (selectedIds.value.has(tile.id)) {
@@ -66,11 +64,8 @@ function handleContextMenu(tile: Tile) {
 }
 
 function handlePick(tile: Tile) {
-  console.log('handlePick')
-  console.log([...selectedIds.value])
-  // start of group drag
   if (selectedIds.value.has(tile.id) && selectedIds.value.size > 1) {
-    console.log('in start of group drag')
+    // start of group drag
     // snapshot other selected tiles' current x/y in groupDragOrigin
     dragStartPos.value = {
       x: tile.x,
@@ -81,11 +76,16 @@ function handlePick(tile: Tile) {
       if (id === tile.id) {
         return;
       }
-      groupDragOrigin.value.set(id, {
-        x: dragStartPos.value.x,
-        y: dragStartPos.value.y
-      })
+      let currentTile = tiles.value.find((t) => t.id === id)
+      if (currentTile) {
+        groupDragOrigin.value.set(id, {
+          x: currentTile.x,
+          y: currentTile.y
+        })
+      }
     })
+
+    console.log(groupDragOrigin.value)
   }
 
   bringToFront(tile);
@@ -103,20 +103,15 @@ function handleTileMove(position: Position, tile: Tile) {
         pos.x += dx
         pos.y += dy
     })
-    //console.log(groupDragOrigin.value)
   }
 }
 function handleOnEnd(e: any, tile: Tile) {
-  console.log('handleOnEnd')
-  console.log([...selectedIds.value])
-
   activeDragId.value = null
   groupDragOrigin.value = new Map<number, Position>()
   dragStartPos.value = null
 
   // collapse
   if (!e.shiftKey && !selectedIds.value.has(tile.id) && selectedIds.value.size > 1) {
-      console.log('collapse')
       selectedIds.value = new Set([tile.id])
   }
 }
