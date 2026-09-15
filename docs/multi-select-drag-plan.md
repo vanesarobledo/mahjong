@@ -99,7 +99,7 @@ through too, so the parent can branch on `event.shiftKey`:
   present) — do **not** flip.
 - shift not held → flip, exactly as today.
 
-**Why shift is scoped to click only, never to drag-start:** it's tempting to also
+**Why shift is scoped to click only, never to drag-*start*:** it's tempting to also
 check `event.shiftKey` in the drag-start handler (step 4) to let shift+drag add a
 tile to the selection *and* immediately move it. Don't — walk through what happens
 if you do: mousedown fires the drag-start handler first, click fires after (on
@@ -110,25 +110,101 @@ shift out of the drag-start decision entirely avoids the conflict — and it mat
 the workflow you described: build the selection with shift+click first, *then*
 drag (no shift needed) to move it, as two separate steps.
 
+(This is a rule about drag-*start* specifically. Step 4 below revisits `shiftKey`
+at drag-*end*, where reading it turns out to be safe — for a different reason
+than "shift shouldn't matter here." Don't over-generalize this into "never read
+shiftKey in a drag hook.")
+
 ## Step 4 — Drag-start decision + group-drag delta propagation
 
-This is the core mechanic. It hooks into the existing `pick` emit (fires on
-`useDraggable`'s `onStart`, i.e. on mousedown) — this already runs `bringToFront`,
-so extend that same handler rather than adding a new event.
+This is the core mechanic. It hooks into two `useDraggable` lifecycle hooks:
+`pick` (fires on `onStart`, i.e. on mousedown — already wired, already runs
+`bringToFront`) and a new `end` hook (fires on `onEnd`, i.e. on mouseup/pointerup)
+that needs wiring the same way Step 1 wired `move`: add an `onEnd` option to
+`useDraggable()` in `TileDraggable.vue`, emit an `end` event with the native
+pointer event, and listen for `@end` in `App.vue`.
 
-**Drag-start decision** (`onTilePick`, called from `@pick`):
+**Drag-start decision** (`onTilePick`, called from `@pick`) — this hook only
+ever sets up group-drag bookkeeping. It never touches `selectedIds` itself:
 - Still call `bringToFront(tile)` — unchanged.
 - If this tile is already in `selectedIds` **and** the selection has more than one
   member → this is the start of a group drag. Snapshot the *other* selected
   tiles' current `x`/`y` into `groupDragOrigin` (a `Map<id, {x, y}>` — skip the
-  dragged tile itself, it manages its own position). Record the dragged tile's own
-  starting position in `dragStartPos`. Record its id in `activeDragId`.
-- Otherwise (tile isn't selected, or is the only thing selected) → **locked
-  decision:** collapse the selection to just this tile (`selectedIds = new
-  Set([tile.id])`), clear any group-drag state. This matches standard
-  Figma/Illustrator behavior — grabbing an unselected tile always narrows focus to
-  it, even before you know whether the mousedown turns into a drag or a plain
-  click.
+  dragged tile itself, it manages its own position; look each other id up in
+  `tiles.value` to read *that specific tile's* `x`/`y`, not the dragged tile's).
+  Record the dragged tile's own starting position in `dragStartPos`. Record its
+  id in `activeDragId`.
+- Otherwise (tile isn't selected, or is the only thing selected) → do nothing to
+  `selectedIds` here. (An earlier version of this step said to collapse the
+  selection right here — that was wrong; see below.)
+
+**Why the collapse decision moved to drag-*end*, not drag-start (this section
+originally said the opposite — recorded here because it took a real bug to find
+this):**
+
+The original version of this step said the "otherwise" branch above should
+*immediately* collapse `selectedIds` to just this tile, reasoning that `pick`
+fires on mousedown, "even before you know whether the mousedown turns into a drag
+or a plain click" — matching Figma, where grabbing an unselected object narrows
+focus to it right away.
+
+That's true in isolation, but it breaks Step 3's premise. `pick` fires on *every*
+mousedown, including the mousedown that starts a shift+click. Trace it by hand:
+you shift+click tile 1 (`selectedIds = {1}`). You shift+click tile 2. `pick`
+fires first, on tile 2's mousedown — tile 2 isn't in `selectedIds` yet, so the
+"otherwise" branch collapses the set to `{2}`, discarding tile 1. *Then* `click`
+fires and tile 2's shift-toggle runs — but tile 2 is already in the set (`pick`
+just put it there a moment ago), so the toggle reads that as "already selected"
+and removes it. Net result: `{}`. Every attempt to grow the selection past one
+tile erases what came before it, and empirically this reproduces as "shift+click
+feels inconsistent, can't select three tiles."
+
+This is the same category of trap called out just above for drag-*start* and
+shift — it just wasn't obvious until this specific two-shift-clicks-in-a-row
+sequence was traced by hand and confirmed by testing. `pick` can't fix this by
+checking `event.shiftKey` either, since `pick` doesn't receive the native event,
+and giving it one just to read shift here would recreate the exact race Step 3
+already ruled out (two handlers *mutating* the same set within one interaction).
+
+The fix: move the collapse to **drag-end** (`onEnd`/`@end`) instead of
+drag-start. Two reasons this specific hook works where `pick` couldn't:
+1. `onEnd` receives the native pointer event, so `event.shiftKey` is available
+   there. Reading it here is safe for a reason specific to this hook: the new
+   `onTileEnd` handler only ever *skips* mutating `selectedIds` when shift is
+   held — it leaves `click`'s own toggle as the sole writer in that case. It
+   never *adds* anything the way the old drag-start version implicitly did. Two
+   handlers racing to mutate the same set is the problem Step 3 flagged; one
+   handler that mutates only when the other one won't isn't that problem.
+2. `onEnd` fires exactly once per interaction, regardless of how far the pointer
+   moved — a real drag and a near-motionless click both end in exactly one
+   `onEnd` call. That means the collapse now reliably runs for a genuine drag of
+   an unselected tile too (native `click` does **not** reliably fire after real
+   pointer movement in this app — verify this yourself with a console.log before
+   trusting it either way), which the checklist requires: "drag a tile that's
+   *not* in the current selection while others are selected → selection
+   collapses to just that tile."
+
+So, in the new `onTileEnd(event, tile)` handler:
+- Always clear `activeDragId` / `groupDragOrigin` / `dragStartPos` (this replaces
+  a plain `mouseup` handler that did only this — see below for why that handler
+  needs replacing, not just extending).
+- If `!event.shiftKey` and the tile is *not* already part of a `size > 1`
+  selection, collapse: `selectedIds.value = new Set([tile.id])`.
+
+**Why a raw `@mouseup` bound to the tile's own element isn't good enough for
+this** (worth knowing even if you never hit it, because it's an easy first
+instinct): a native `mouseup` listener on the tile's own DOM element only fires
+if the pointer is still physically over that element at the moment of release.
+During a fast drag, the tile's on-screen position updates reactively — there's a
+render tick of lag between "the pointer moved here" and "the div's `style`
+binding visually caught up to here." If the mouse releases inside that lag
+window, the browser never dispatches `mouseup` to that specific element, and the
+handler silently doesn't run. This shows up as intermittent, seemingly random
+misfires — worse the faster or farther the drag. `useDraggable`'s own
+`onStart`/`onMove`/`onEnd` don't have this problem, because vueuse tracks the
+drag internally via listeners bound at the window/document level rather than on
+the element itself — the same reason Step 5 tells you to attach the marquee's
+own move/end listeners at the window level instead of on a specific element.
 
 **Delta propagation** (`onTileMove`, called from `@move`, step 1's handler,
 extended):
@@ -138,9 +214,6 @@ extended):
   exists: compute `dx`/`dy` as the difference between the incoming position and
   `dragStartPos`. For every `(id, origin)` in `groupDragOrigin`, set that tile's
   `x = origin.x + dx`, `y = origin.y + dy`.
-- Clear `activeDragId`/`groupDragOrigin`/`dragStartPos` when the drag ends (wire
-  up `useDraggable`'s `onEnd` the same way you wired `onMove`, or a window
-  `mouseup` listener — either works, pick whichever reads cleaner to you).
 
 **Why the dragged tile never gets double-moved:** trace it through — the delta
 loop iterates only `groupDragOrigin`'s keys, and the dragged tile was explicitly
@@ -216,10 +289,11 @@ Use `outline` (with `outline-offset`), not `box-shadow` — it won't interact wi
 ## Files touched
 
 - **`src/components/TileDraggable.vue`** — `selected` prop, `move` emit + watch
-  guard, `:class="{ selected }"` + CSS.
+  guard, `end` emit, `:class="{ selected }"` + CSS.
 - **`src/App.vue`** — new state (step 2), `onTileClick`, `toggleSelect`,
-  `onTilePick`, `onTileMove`, `onBoardMouseDown`, marquee hit-test, marquee style
-  computed, template changes (new bindings, marquee `<div>`), `.marquee` CSS.
+  `onTilePick`, `onTileMove`, `onTileEnd` (replaces a plain `mouseup` handler —
+  see step 4), `onBoardMouseDown`, marquee hit-test, marquee style computed,
+  template changes (new bindings, marquee `<div>`), `.marquee` CSS.
 - **`src/types.ts`** — no change (selection is a `Set` in `App.vue`, not a `Tile`
   field).
 - **`mahjong-project-summary.md`** — once this is working, add it under
@@ -245,3 +319,51 @@ Use `outline` (with `outline-offset`), not `box-shadow` — it won't interact wi
       dragging a lone unselected tile behaves as before, and shuffle/order still
       work correctly after tiles have been manually dragged (this now depends on
       step 1 keeping `x`/`y` accurate).
+
+## Step 4 debugging log — bugs found while implementing delta propagation
+
+Recorded here because each one is a specific trap worth remembering, not just a
+typo — future steps (marquee hit-testing especially) touch the same `tiles.value`
+array and the same "id vs. array position" and "snapshot vs. live value" traps
+could resurface there.
+
+1. **Indexing `tiles.value` by id instead of searching for it.** The first draft
+   of `handlePick`'s snapshot loop read `tiles.value[id]`, which only works if a
+   tile's `id` happens to equal its position in the array. It doesn't stay true:
+   `bringToFront` (called at the end of every `handlePick`) splices a tile out and
+   pushes it to the end, reordering the array on every single pick. After the
+   first drag, `tiles.value[id]` silently points at the wrong tile. Fixed by
+   switching to `tiles.value.find(t => t.id === id)` — an actual search by field,
+   not a position lookup — with an `if (currentTile)` guard for the "not found"
+   case. Lesson: never conflate a domain id with array position once anything in
+   the codebase reorders that array.
+
+2. **Delta computed but never written back to the tiles the template renders
+   from.** An early version of `handleTileMove` computed `dx`/`dy` and mutated the
+   values sitting inside `groupDragOrigin` (the private snapshot bookkeeping), but
+   nothing then wrote the result onto the actual `Tile` objects in `tiles.value` —
+   which is what `:initial-x`/`:initial-y` actually bind to. Symptom: no visible
+   movement of the other selected tiles at all. Fixed by adding a second lookup
+   (`tiles.value.find` by id again) and assigning the computed position onto that
+   tile's own `x`/`y`.
+
+3. **Mutating the origin snapshot instead of treating it as fixed.** Even after
+   fix #2, `dx`/`dy` are calculated against `dragStartPos`, which never changes
+   for the duration of one drag — meaning `dx` on every `move` event is already
+   the *total* displacement since the drag started, not the incremental change
+   since the last event. The buggy version applied that cumulative `dx` with
+   `pos.x += dx` onto `groupDragOrigin`'s stored value on *every* move event,
+   compounding a growing delta on top of itself each frame instead of computing a
+   fresh absolute position. Symptom: grouped tiles flew far off screen, worse the
+   longer the drag continued. Traced by hand-computing three consecutive move
+   events with concrete numbers, which showed the applied offset roughly doubling
+   move-over-move instead of tracking the dragged tile's real displacement. Fixed
+   by leaving `groupDragOrigin`'s snapshot values untouched for the whole drag and
+   computing `currentTile.x = snapshotCoords.x + dx` fresh from that fixed origin
+   on every move event.
+
+**Debugging technique note:** used Firefox's debugger (breakpoints + the Scopes
+pane, Watch Expressions, and evaluating expressions like `groupDragOrigin.value`
+directly in the console while paused) instead of `console.log`, since stepping
+through reactive `ref`/`Map` state is easier to inspect live than to serialize
+into a log line.

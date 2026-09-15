@@ -34,7 +34,7 @@ Scope is split into two tiers below: **Near-term** (setup/bookkeeping helpers, b
 ## Data layer
 
 `src/data/tiles.js` — a static JSON array of the 136-tile riichi set:
-```js
+```
 { id: number, src: string, name: string }
 ```
 - 4 copies of each suit tile (Man/Pin/Sou 1–9), except 5s: 3 regular + 1 `-Dora` variant (red five) per suit — 3 + 1 = 4, matching standard tile counts
