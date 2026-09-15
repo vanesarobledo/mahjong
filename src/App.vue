@@ -42,9 +42,8 @@ function getInitializedPosition(index : number) {
   }
 }
 
-function handleClick(e: any, tile: Tile) {
+function handleClick(e: MouseEvent, tile: Tile) {
   if (e.shiftKey) {
-    // toggle tile id in selectedId
     if (selectedIds.value.has(tile.id)) {
       selectedIds.value.delete(tile.id)
       console.log(`removed selected id: ${tile.id}`)
@@ -53,7 +52,7 @@ function handleClick(e: any, tile: Tile) {
       selectedIds.value.add(tile.id)
       console.log(`added selected id: ${tile.id}`)
     }
-    return;
+    return
   }
 
   flipTile(tile);
@@ -65,8 +64,6 @@ function handleContextMenu(tile: Tile) {
 
 function handlePick(tile: Tile) {
   if (selectedIds.value.has(tile.id) && selectedIds.value.size > 1) {
-    // start of group drag
-    // snapshot other selected tiles' current x/y in groupDragOrigin
     dragStartPos.value = {
       x: tile.x,
       y: tile.y
@@ -84,8 +81,6 @@ function handlePick(tile: Tile) {
         })
       }
     })
-
-    console.log(groupDragOrigin.value)
   }
 
   bringToFront(tile);
@@ -94,17 +89,10 @@ function handlePick(tile: Tile) {
 function handleTileMove(position: Position, tile: Tile) {
   updateCoords(tile, position)
 
-  if (activeDragId.value === tile.id && groupDragOrigin.value) {
-    selectedIds.value.forEach((id) => {
-      if (id === tile.id) {
-        return;
-      }
-
+  if (activeDragId.value === tile.id) {
+    groupDragOrigin.value.forEach((snapshotCoords, id) => {
       let currentTile = tiles.value.find((t) => t.id === id)
-      let snapshotCoords = groupDragOrigin.value.get(id)
-
-      if (currentTile && snapshotCoords && dragStartPos.value) {
-        // compute dx/dy
+      if (currentTile && dragStartPos.value) {
         let dx = position.x - dragStartPos.value.x
         let dy = position.y - dragStartPos.value.y
 
@@ -114,7 +102,7 @@ function handleTileMove(position: Position, tile: Tile) {
     })
   }
 }
-function handleOnEnd(e: any, tile: Tile) {
+function handleOnEnd(e: MouseEvent, tile: Tile) {
   activeDragId.value = null
   groupDragOrigin.value = new Map<number, Position>()
   dragStartPos.value = null
@@ -196,11 +184,11 @@ function updateCoords(tile : Tile, position: Position) {
         :initial-x="tile.x"
         :initial-y="tile.y"
         :prevent-default="true"
-        @click="($event: any) => handleClick($event, tile)"
+        @click="($event: MouseEvent) => handleClick($event, tile)"
         @contextmenu.prevent="handleContextMenu(tile)"
         @pick="handlePick(tile)"
         @move="(position) => handleTileMove(position, tile)"
-        @end="($event) => handleOnEnd($event, tile)"
+        @end="($event: MouseEvent) => handleOnEnd($event, tile)"
     >
       <div
           class="tile-3d"
@@ -258,14 +246,4 @@ function updateCoords(tile : Tile, position: Position) {
   background-image: url('/img/tiles/Back.svg');
   transform: rotateY(180deg);
 }
-
-.grid-board {
-  /*display: flex;*/
-}
-
-.wall {
-  display: grid;
-
-}
-
 </style>

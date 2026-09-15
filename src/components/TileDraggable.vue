@@ -11,7 +11,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'pick'): void,
   (e: 'move', position: Position): void,
-  (e: 'end', event: Event): void
+  (e: 'end', event: MouseEvent): void
 }>()
 
 const el = useTemplateRef('el')
