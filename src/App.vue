@@ -13,15 +13,18 @@ const tiles = ref(
         ...t,
         rotationY: 0,
         rotationZ: 0,
-        isFaceUp: false,
+        isFaceUp: true,
         x: pos.x,
         y: pos.y,
+        zIndex: index,
       }
     })
 )
 
+const frontMostTile = ref(Tiles.length)
+
 const selectedIds = ref(new Set<number>())
-const marquee = ref(null)
+const marquee: Ref<{current: {x: number, y: number}, start: {x: number, y: number}} | null> = ref(null)
 
 const dragStartPos: Ref<Position | null> = ref(null)
 const activeDragId: Ref<number | null> = ref(null)
@@ -32,8 +35,8 @@ const TILE_PADDING = 10
 const TILES_PER_ROW = 14
 
 function getInitializedPosition(index : number) {
-  let TILE_SPACING_X = TILE_WIDTH + (TILE_PADDING - 1)
-  let TILE_SPACING_Y = TILE_HEIGHT
+  const TILE_SPACING_X = TILE_WIDTH + (TILE_PADDING - 1)
+  const TILE_SPACING_Y = TILE_HEIGHT
   const col = index % TILES_PER_ROW;
   const row = Math.floor(index / TILES_PER_ROW);
   return {
@@ -107,9 +110,30 @@ function handleOnEnd(e: MouseEvent, tile: Tile) {
   groupDragOrigin.value = new Map<number, Position>()
   dragStartPos.value = null
 
-  // collapse
-  if (!e.shiftKey && !selectedIds.value.has(tile.id) && selectedIds.value.size > 1) {
-      selectedIds.value = new Set([tile.id])
+  if (!e.shiftKey && !(selectedIds.value.has(tile.id) && selectedIds.value.size > 1)) {
+      selectedIds.value = new Set([])
+  }
+}
+
+function handleMouseDown(event: MouseEvent) {
+  if (!boardRef.value || event.target !== boardRef.value) {
+    return
+  }
+
+  const boundingClientRect = {
+    x: boardRef.value.getBoundingClientRect().left,
+    y: boardRef.value.getBoundingClientRect().top
+  }
+
+  marquee.value = {
+    start: {
+      x: event.clientX - boundingClientRect.x,
+      y: event.clientY - boundingClientRect.y
+    },
+    current: {
+      x: event.clientX - boundingClientRect.x,
+      y: event.clientY - boundingClientRect.y
+    }
   }
 }
 
@@ -123,18 +147,19 @@ function rotateTile(tile : Tile) {
 }
 
 function bringToFront(tile : Tile) {
-  const index = tiles.value.indexOf(tile);
-  tiles.value.splice(index, 1)
-  tiles.value.push(tile)
+  tile.zIndex = frontMostTile.value
+  frontMostTile.value += 1
 }
 
 function orderTiles() {
   tiles.value.forEach(tile => {
     const pos = getInitializedPosition(tile.id)
     tile.rotationY = 0
+    tile.rotationZ = 0
     tile.isFaceUp = false
     tile.x = pos.x
     tile.y = pos.y
+    tile.zIndex = tile.id
   })
 }
 
@@ -150,6 +175,7 @@ function resetGame() {
     tile.rotationY = 180
     tile.x = Math.random() * (boardWidth - TILE_WIDTH)
     tile.y = Math.random() * (boardHeight - TILE_HEIGHT)
+    tile.zIndex = tile.id
   })
 
 }
@@ -175,7 +201,11 @@ function updateCoords(tile : Tile, position: Position) {
   <button @click="resetGame()">Shuffle Tiles</button>
   <button @click="orderTiles()">Order Tiles</button>
 
-  <div ref="board" class="board">
+  <div
+      ref="board"
+      class="board"
+      @mousedown="($event: MouseEvent) => handleMouseDown($event)"
+  >
     <TileDraggable
         v-for="tile in tiles"
         :key="tile.id"
@@ -184,6 +214,8 @@ function updateCoords(tile : Tile, position: Position) {
         :initial-x="tile.x"
         :initial-y="tile.y"
         :prevent-default="true"
+        :class="{ selected: selectedIds.has(tile.id) }"
+        :style="{ zIndex: tile.zIndex }"
         @click="($event: MouseEvent) => handleClick($event, tile)"
         @contextmenu.prevent="handleContextMenu(tile)"
         @pick="handlePick(tile)"
@@ -245,5 +277,9 @@ function updateCoords(tile : Tile, position: Position) {
 .back {
   background-image: url('/img/tiles/Back.svg');
   transform: rotateY(180deg);
+}
+
+.selected {
+  box-shadow: 2px 2px 2px rgb(255,215,0), 2px 2px 2px rgb(255,215,0);
 }
 </style>

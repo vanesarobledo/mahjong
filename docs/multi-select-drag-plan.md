@@ -182,14 +182,37 @@ drag-start. Two reasons this specific hook works where `pick` couldn't:
    pointer movement in this app — verify this yourself with a console.log before
    trusting it either way), which the checklist requires: "drag a tile that's
    *not* in the current selection while others are selected → selection
-   collapses to just that tile."
+   clears, only that tile moves."
 
 So, in the new `onTileEnd(event, tile)` handler:
 - Always clear `activeDragId` / `groupDragOrigin` / `dragStartPos` (this replaces
   a plain `mouseup` handler that did only this — see below for why that handler
   needs replacing, not just extending).
 - If `!event.shiftKey` and the tile is *not* already part of a `size > 1`
-  selection, collapse: `selectedIds.value = new Set([tile.id])`.
+  selection — i.e. `!e.shiftKey && !(selectedIds.has(tile.id) && selectedIds.size > 1)`,
+  which is exactly "this interaction wasn't a group drag" (the same `has && size > 1`
+  test `onTilePick` uses) — **clear** the selection: `selectedIds.value = new Set()`.
+
+**Why clear, not collapse-to-this-tile (revised after testing):** an earlier
+version of this bullet collapsed to `new Set([tile.id])`, Figma-style — whatever
+you last grabbed becomes the selection. Because `onEnd` fires for plain clicks
+too, that meant *every* non-shift interaction silently selected the tile touched.
+Trace it: selection is empty, you plain-click tile 2 to flip it → `{2}`. You then
+shift+click tile 3 intending to start a fresh group → `{2, 3}`, with tile 2
+included unintentionally. Clearing instead means a selection only ever contains
+tiles you explicitly shift+clicked (or, once Step 5 lands, marquee-selected), so
+every shift+click after a plain interaction starts fresh. What's given up is the
+"the tile you just grabbed is selected" feedback — but a one-tile selection
+enables nothing (group drag needs `size > 1`), so it wasn't worth anything here.
+
+**Negation trap in that condition** (a real bug hit while implementing it): the
+first draft wrote `!selectedIds.has(tile.id) && selectedIds.size > 1`, negating
+only the first operand. The spec's "*not* already part of a size > 1 selection"
+negates the whole conjunction: `!(H && B)`, which by De Morgan's laws equals
+`!H || !B` — the `&&` flips to `||` when the `!` is distributed. The buggy
+version missed the `!H && !B` case (selection `{1}`, drag tile 2 → should reset,
+but `{1}` survived). Keep the un-distributed `!(H && B)` form — it reads like the
+spec sentence, and distributing it by hand is exactly where the bug came from.
 
 **Why a raw `@mouseup` bound to the tile's own element isn't good enough for
 this** (worth knowing even if you never hit it, because it's an easy first
@@ -314,7 +337,10 @@ Use `outline` (with `outline-offset`), not `box-shadow` — it won't interact wi
       instead of replacing it.
 - [ ] Click empty background with no drag — selection clears.
 - [ ] Drag a tile that's *not* in the current selection while others are selected
-      — selection collapses to just that tile, only it moves.
+      — selection clears, only that tile moves.
+- [ ] Plain-click (flip) a tile with nothing selected, then shift+click another
+      tile — selection is just the shift+clicked tile; the flipped one isn't
+      included.
 - [ ] Existing gestures still work: plain click flips, right-click rotates 90°,
       dragging a lone unselected tile behaves as before, and shuffle/order still
       work correctly after tiles have been manually dragged (this now depends on

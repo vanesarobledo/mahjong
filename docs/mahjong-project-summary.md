@@ -41,7 +41,7 @@ Scope is split into two tiers below: **Near-term** (setup/bookkeeping helpers, b
 - 4 copies of each honour tile (Ton, Nan, Shaa, Pei, Hatsu, Chun, Haku)
 - Ordered: Man → Pin → Sou → Ton → Nan → Shaa → Pei → Hatsu → Chun → Haku
 - `name` is the filename without extension (e.g. `Man5-Dora`)
-- This is purely descriptive data — **no position, rotation, or game state lives here**. Runtime state (x, y, isFaceUp, rotationY, rotationZ) is added to each tile object at component-mount time in the parent's `ref()`.
+- This is purely descriptive data — **no position, rotation, or game state lives here**. Runtime state (x, y, zIndex, isFaceUp, rotationY, rotationZ) is added to each tile object at component-mount time in the parent's `ref()`.
 
 ## Component architecture
 
@@ -58,10 +58,12 @@ Scope is split into two tiers below: **Near-term** (setup/bookkeeping helpers, b
    - *Why:* `useDraggable` computes x/y via `getBoundingClientRect()`, which is always viewport-relative unless you explicitly pass `containerElement`. Without it, tiles "jump" and drag incorrectly inside any ancestor with `position`/`perspective`/`transform` set (these properties change what `position: fixed` means, and `absolute` alone doesn't fix vueuse's internal math).
 
 2. **Every tile is a separate child component, keyed by `tile.id`** (not array index). 
-   - *Why:* Vue reuses component instances across re-renders when a stable `:key` is used, which is required so each tile's internal drag position (state living *inside* `useDraggable`, not in the parent array) survives array reordering (e.g. bring-to-front, shuffle).
+   - *Why:* Vue reuses component instances across re-renders when a stable `:key` is used, which is required so each tile's internal drag position (state living *inside* `useDraggable`, not in the parent array) survives array reordering (e.g. shuffle).
 
-3. **"Bring to front" (z-ordering) is implemented via DOM order, not a numeric z-index.** 
-   - On pick (drag start / `onStart`), the clicked tile is spliced out of the `tiles` array and pushed to the end. Because no `z-index` is set anywhere, default stacking context means the last-rendered element paints on top — reusing behavior that was already occurring naturally, rather than introducing a separate z-index counter property.
+3. **"Bring to front" (z-ordering) is implemented via a numeric `zIndex` on each tile, not DOM order.** 
+   - Each tile gets `zIndex: index` at construction. A single counter in the parent holds the next top value; on pick (drag start / `onStart`), the picked tile is assigned the counter's value and the counter increments. The value is bound as `:style="{ zIndex }"` on `<TileDraggable>`, which Vue merges with the `left`/`top` style `useDraggable` sets on the child's root element (fallthrough `style` merging).
+   - *Bug this fixed:* the earlier version spliced the picked tile out of the `tiles` array and pushed it to the end, letting DOM paint order decide stacking. Because the `v-for` is keyed, Vue physically moved that tile's DOM node during `pointerdown`. The browser then didn't deliver the following `click` to the moved node, so the first click on any tile that wasn't already last in the array was swallowed — shift-click selection (and plain-click flip) needed two clicks. With `zIndex`, the DOM never moves on pick, so `click` fires reliably.
+   - *Alternative considered:* keep a separate `stackOrder` array of ids and derive z-index from each id's position in it (keeps values small, but costs an `indexOf` per lookup). The counter was chosen for simplicity; its unbounded growth is irrelevant in practice (browser z-index max is a 32-bit int).
 
 4. **Tile position (`x`, `y`) is stored on the tile object itself, not derived from array index.** 
    - *Bug this fixed:* an earlier version computed each tile's initial position from its index in the array (`getInitializedPosition(index)`). Once array reordering was introduced (bring-to-front), every tile's index shifted, which cascaded into every subsequent tile's position changing as an unintended side effect. Fix: assign `x`/`y` once at construction time and treat them as real, independent tile state from then on.
