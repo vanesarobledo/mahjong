@@ -49,11 +49,9 @@ function handleClick(e: MouseEvent, tile: Tile) {
   if (e.shiftKey) {
     if (selectedIds.value.has(tile.id)) {
       selectedIds.value.delete(tile.id)
-      console.log(`removed selected id: ${tile.id}`)
     }
     else {
       selectedIds.value.add(tile.id)
-      console.log(`added selected id: ${tile.id}`)
     }
     return
   }
