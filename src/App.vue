@@ -71,22 +71,38 @@ function handlePick(tile: Tile) {
       x: tile.x,
       y: tile.y
     }
+
     activeDragId.value = tile.id
+
+    let groupTiles: Tile[] = []
+
     selectedIds.value.forEach((id) => {
       if (id === tile.id) {
         return;
       }
       let currentTile = tiles.value.find((t) => t.id === id)
       if (currentTile) {
+        groupTiles.push(currentTile)
         groupDragOrigin.value.set(id, {
           x: currentTile.x,
           y: currentTile.y
         })
       }
     })
-  }
 
+    restackTiles(groupTiles)
+
+  }
   bringToFront(tile);
+
+}
+
+function restackTiles(group: Array<Tile>) {
+  group.sort((a, b): number => {
+    return a.zIndex - b.zIndex
+  })
+
+  group.forEach(bringToFront)
 }
 
 function handleTileMove(position: Position, tile: Tile) {
