@@ -253,10 +253,15 @@ movement.
 
 ## Step 5 — Marquee: box, drag-to-select, hit-test
 
-Add a `<div>` inside `.board`, sibling to the tiles, that renders only while
-`marquee` is non-null — positioned/sized from `marquee.value`'s start/current
-point (min/max math to handle dragging in any direction), `pointer-events: none`
-so it can never itself catch a mouse event.
+Step 5 breaks into four pieces. Build and check them in this order — each one is
+visible on screen before the next depends on it:
+
+1. **5a** — record the gesture (mousedown → mousemove → mouseup) into `marquee`.
+2. **5b** — draw the box from `marquee`.
+3. **5c** — the hit-test: which tiles does the box touch?
+4. **5d** — commit the result to `selectedIds` (click-vs-drag, shift/union).
+
+### 5a — Recording the gesture
 
 Wire `@mousedown` on `.board` itself:
 - **Guard:** only start a marquee if `event.target === boardRef.value` exactly —
@@ -265,36 +270,194 @@ Wire `@mousedown` on `.board` itself:
   is what stops a tile-drag from also being misread as a marquee-start. Worth a
   short comment in the code explaining why, since it'll silently break if a
   future non-tile element — a wall/zone marker — gets added inside `.board`.)
+- Call `event.preventDefault()` once the guard passes. Without it, dragging
+  across the page starts a native text selection (the `<h1>`, the button labels)
+  that paints blue highlight behind your marquee.
 - Record the start point in board-relative coordinates
   (`event.clientX/Y - boardRef.getBoundingClientRect().left/top`).
-- Attach window-level `mousemove`/`mouseup` listeners for the duration of the
-  drag — use `useEventListener` from `@vueuse/core` (already a project
-  dependency) rather than raw `addEventListener`, consistent with how this
-  project already leans on vueuse. Call its returned `stop()` as soon as the
-  interaction ends.
-- On `mousemove`: update `marquee.value`'s current point.
-- On `mouseup`: run the hit-test (below), then clear `marquee`, stop both
-  listeners.
+- Record `event.shiftKey` **on the marquee state itself** (e.g. an `additive:
+  boolean` field next to `start`/`current`). 5d needs it at mouseup, and reading
+  it once here — rather than off the mouseup event — is what "shift is read at
+  marquee-start" means in practice.
 
-**Click vs. drag disambiguation:** if the total mouse movement during the
-interaction is below a small threshold (a few pixels), treat it as a plain click
-on empty background rather than a marquee — and clear the selection. Otherwise it
-was a real marquee drag; skip clearing.
+On `mousemove`: update `marquee.value.current`. **Same coordinate space as
+`start`** — subtract the board's `getBoundingClientRect().left/top` here too.
+Raw `clientX/Y` is viewport-relative; the board sits below the heading and
+buttons, so mixing the two produces a box offset vertically from the cursor by
+exactly the height of everything above `.board`. Pull the "client → board"
+conversion into one small helper and call it from both places, so they can't
+drift apart.
 
-**Hit-test** (**locked decision: partial overlap counts**, not full containment —
-matches Figma/Illustrator, not classic Windows Explorer): standard axis-aligned
-rectangle intersection between the marquee box and each tile's bounds
-(`tile.x`, `tile.y`, `TILE_WIDTH`, `TILE_HEIGHT` — both already in board-relative
-coordinates thanks to `containerElement` in `useDraggable`, so no conversion is
-needed). Two rectangles intersect when they overlap on both axes — work out the
-four-comparison condition yourself; it's the same shape as the classic
-"A.left < B.right && A.right > B.left && ..." check.
+On `mouseup`: run 5c + 5d, then set `marquee.value = null`.
 
-If shift was held when the marquee started, **union** the hits into the existing
-`selectedIds` instead of replacing it — this is the one place shift *does*
-matter for a drag gesture, but note it's read once at marquee-start (not
-continuously, and not on a tile), so it doesn't run into the same conflict step 3
-called out.
+**Window-level listeners — two valid shapes, pick one:**
+- *Always-on, gated:* register `useEventListener(window, 'mousemove', …)` and
+  `'mouseup'` once at setup, and have each handler `return` immediately when
+  `marquee.value` is `null`. Simplest; vueuse removes them when the component
+  unmounts. The cost is a no-op function call on every mouse move in the app,
+  which is negligible here.
+- *Per-interaction:* call `useEventListener` inside the mousedown handler and
+  keep the returned stop functions, calling them in mouseup. Tighter, but note
+  that vueuse only auto-cleans a listener registered during component setup
+  (inside an active effect scope) — one registered from inside an event handler
+  is yours to stop, every time, including if the component unmounts mid-drag.
+
+Either way, **why window and not `.board`:** the pointer can leave the board
+mid-drag (drag up past the top edge, release over the buttons). A board-level
+`mouseup` would never fire, and `marquee` would stay stuck non-null — the same
+"listener bound to the wrong element misses the release" problem described in
+step 4's `@mouseup` section.
+
+Name trap: inside a `<script setup>` handler, a bare `stop()` with no local
+variable of that name doesn't throw — it resolves to the browser global
+`window.stop()`, which aborts page loading. It'll silently "work." If you want a
+stop function, it has to be the one `useEventListener` returned to you.
+
+**Check yourself (5a):** with only this done, `console.log(marquee.value)` on
+mouseup (or watch it in Vue devtools) — `start` should be `{0, 0}`-ish when you
+press at the board's top-left corner, not `{0, 120}`-ish, and `current` should
+agree with `start` when you haven't moved.
+
+### 5b — Drawing the box
+
+Add a `<div class="marquee">` inside `.board`, sibling to the tiles, rendered
+only while `marquee` is non-null, `position: absolute`, `pointer-events: none`
+so it can never itself catch a mouse event, and a `z-index` above every tile
+(tiles' `zIndex` keeps climbing via `bringToFront`, so a fixed small number won't
+stay on top — either bind it to `frontMostTile + 1` or give it a very large
+value).
+
+The box can be dragged in any direction, so `start` isn't necessarily the
+top-left. Normalize into a rectangle once:
+
+- `left = min(start.x, current.x)`, `right = max(start.x, current.x)`
+- same for `top`/`bottom` with `y`
+
+Make that normalized rect a **`computed`**, and have *both* the box's `style`
+and the hit-test in 5c read from it. If the drawing and the hit-test each do
+their own min/max, it's possible for what you see and what gets selected to
+disagree — one source of truth, same principle as `selectedIds`.
+
+**Check yourself (5b):** drag in all four diagonal directions from the same
+point; the box should always hug the cursor.
+
+### 5c — The hit-test
+
+**Locked decision: partial overlap counts**, not full containment — matches
+Figma/Illustrator, not classic Windows Explorer.
+
+**Tile bounds.** A tile's rectangle is `left = tile.x`, `top = tile.y`,
+`right = tile.x + TILE_WIDTH`, `bottom = tile.y + TILE_HEIGHT`. `tile.x/y` are
+already board-relative — `useDraggable` with `containerElement` computes
+position as the element's offset from the container's `getBoundingClientRect()`
+(see `start()` in `node_modules/@vueuse/core/dist/index.js`), which is the same
+origin 5a uses for the marquee. So both rectangles are in the same space and no
+conversion is needed. This is only true *because of* step 1 — before it,
+`tile.x/y` was stale for any tile you'd dragged.
+
+**Derive the overlap condition in 1D first.** Two rectangles overlap exactly
+when their x-ranges overlap **and** their y-ranges overlap. So the real question
+is the one-dimensional one: when do two intervals `[aStart, aEnd]` and
+`[bStart, bEnd]` on a number line overlap?
+
+It's easier to answer the opposite first. Draw two intervals that *don't*
+overlap. There are only two ways that can happen — what are they, in terms of
+one interval's end and the other's start? Write that as a boolean, then negate it
+to get "they overlap." You've already met the negation trap in step 4's
+`!(H && B)` bug: negating an `||` of two comparisons flips it to an `&&` and
+flips each comparison. Distribute it carefully, then sanity-check against this
+table (intervals on the x-axis, A = marquee, B = tile):
+
+| A (marquee) | B (tile) | Overlap? | Why |
+|---|---|---|---|
+| `[0, 100]` | `[50, 100]` | yes | B starts inside A |
+| `[60, 100]` | `[50, 100]` | yes | A starts inside B — the "grabbed just the right edge of a tile" case |
+| `[0, 200]` | `[50, 100]` | yes | A fully contains B |
+| `[70, 80]` | `[50, 100]` | yes | B fully contains A — a tiny marquee drawn *inside* one tile. Easy to miss if you only reason about "does B's edge fall inside A" |
+| `[0, 40]` | `[50, 100]` | no | A ends before B starts |
+| `[110, 200]` | `[50, 100]` | no | A starts after B ends |
+| `[0, 50]` | `[50, 100]` | **you decide** | edges touch, zero-area overlap |
+
+The last row is a real choice, not a gotcha: `<` vs `<=` decides it. Strict
+(`<`) says touching isn't overlapping, which is the usual convention and means a
+marquee that merely grazes a tile's edge pixel doesn't grab it. Pick one and
+write a comment saying which.
+
+Then the 2D condition is your 1D condition applied to x, `&&` the same condition
+applied to y — four comparisons total.
+
+**Write it as a pure function**, e.g. `rectsIntersect(a: Rect, b: Rect):
+boolean`, taking two `{ left, top, right, bottom }` objects. No refs, no
+`tiles.value`, no DOM. That keeps the one tricky piece of logic separate from
+the reactive plumbing, so you can check it by calling it from the console (or a
+unit test, if this project ever adds Vitest) with the table's numbers, without
+drawing a single marquee.
+
+**Collecting hits:** iterate `tiles.value` directly and collect `tile.id` for
+each hit. Iterating the array is fine here — you're reading each tile's own
+fields, never looking one up by id — so the "index isn't id" trap from the step 4
+debugging log doesn't apply. Just make sure what you *store* is `tile.id`, never
+the loop index.
+
+**Decision you need to make: rotated tiles.** Right-click rotates `.tile-3d` by
+`rotateZ(90deg)`, but `tile.x/y` and the wrapper stay a 50×72 upright box. CSS
+rotates around the element's center by default (`transform-origin: 50% 50%`,
+[MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/transform-origin)), so a
+rotated tile's *visible* footprint is 72×50, centered on the same point —
+`(TILE_HEIGHT - TILE_WIDTH) / 2 = 11px` wider on each side and 11px shorter at
+top and bottom than the rect above. Options:
+- *Ignore it* — use the upright rect for every tile. Up to 11px of mismatch at
+  the edges of rotated tiles. Simplest; probably unnoticeable in normal use.
+- *Swap dimensions when `rotationZ === 90`* — compute the rotated footprint from
+  the tile's center. Exact, a few extra lines, and the tile-bounds logic now
+  knows about rotation.
+- *Ask the DOM* — call `getBoundingClientRect()` on each tile element, which
+  returns the box *after* transforms
+  ([CSSOM View spec](https://drafts.csswg.org/cssom-view/#dom-element-getboundingclientrect)).
+  Always matches what's on screen, but needs a ref to every tile element,
+  forces a layout read for all 136 tiles on each mouseup, and gives up the pure
+  function.
+
+Recommendation: start with *ignore it*, test by marquee-grazing the side of a
+rotated tile, and only move to *swap dimensions* if the mismatch actually
+bothers you. Whichever you pick, add it to the "Key architectural decisions" in
+`mahjong-project-summary.md` when this step lands.
+
+Also note, not a bug: the hit-test selects tiles hidden underneath other tiles
+too, since it only looks at rectangles, not stacking. That's consistent with the
+project's "automate, don't judge" philosophy — just don't be surprised by it.
+
+### 5d — Committing the result
+
+At mouseup, in this order:
+
+1. **Click vs. drag:** compute how far the pointer moved between `start` and
+   `current`. If it's below a small threshold (3–5px; either
+   `Math.hypot(dx, dy)` or "both `|dx|` and `|dy|` under N" is fine), treat it as
+   a plain click on empty background: clear the selection, and skip the
+   hit-test entirely. The threshold exists because a real mouse click almost
+   always jitters a pixel or two between down and up.
+2. **Otherwise**, run the hit-test and:
+   - `additive` (shift was held at mousedown) → **union** the hits into the
+     existing `selectedIds`.
+   - not additive → **replace** `selectedIds` with exactly the hits.
+3. Set `marquee.value = null`.
+
+Shift matters here for a drag gesture, but because it's read once at
+marquee-start (not continuously, and not on a tile), it doesn't run into the
+two-handlers-one-set conflict step 3 called out — no tile `click` handler runs
+for a marquee, since the mousedown was on the board.
+
+Open question to verify rather than assume: if you start a marquee on empty
+board and release *over a tile*, does that tile's `click` fire (and flip it)?
+Per the UI Events spec, `click` targets the nearest common ancestor of the
+mousedown and mouseup targets — which would be `.board`, not the tile — but
+browser behavior here has historically varied. Test it in the browsers you
+care about.
+
+**Check yourself (5c + 5d):** run the marquee-related lines of the verification
+checklist below — partial overlap, shift-union, click-to-clear — plus the
+"box fully inside one tile" row from the table above.
 
 ## Step 6 — Visual selection state (CSS)
 

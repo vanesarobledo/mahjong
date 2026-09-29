@@ -3,9 +3,10 @@ import {type Ref, ref, useTemplateRef} from "vue";
 import { Tiles } from '@/data/tiles'
 import TileDraggable from "@/components/TileDraggable.vue";
 import type {Tile} from "@/types.ts";
-import type {Position} from "@vueuse/core";
+import {type Position, useEventListener} from "@vueuse/core";
 
 const boardRef = useTemplateRef('board')
+
 const tiles = ref(
     Tiles.map((t, index) => {
       const pos = getInitializedPosition(index)
@@ -24,7 +25,8 @@ const tiles = ref(
 const frontMostTile = ref(Tiles.length)
 
 const selectedIds = ref(new Set<number>())
-const marquee: Ref<{current: {x: number, y: number}, start: {x: number, y: number}} | null> = ref(null)
+
+const marquee: Ref<{current: {x: number, y: number}, start: {x: number, y: number}, additive: boolean} | null> = ref(null)
 
 const dragStartPos: Ref<Position | null> = ref(null)
 const activeDragId: Ref<number | null> = ref(null)
@@ -92,7 +94,6 @@ function handlePick(tile: Tile) {
 
   }
   bringToFront(tile);
-
 }
 
 function restackTiles(group: Array<Tile>) {
@@ -130,23 +131,59 @@ function handleOnEnd(e: MouseEvent, tile: Tile) {
 }
 
 function handleMouseDown(event: MouseEvent) {
-  if (!boardRef.value || event.target !== boardRef.value) {
+  // Guard only if mousedown is on an empty board and not a tile
+  // Prevents tile-drag from being misread as marquee-start
+  if (event.target !== boardRef.value) {
     return
   }
 
-  const boundingClientRect = {
-    x: boardRef.value.getBoundingClientRect().left,
-    y: boardRef.value.getBoundingClientRect().top
-  }
+  event.preventDefault()
 
   marquee.value = {
-    start: {
-      x: event.clientX - boundingClientRect.x,
-      y: event.clientY - boundingClientRect.y
-    },
-    current: {
-      x: event.clientX - boundingClientRect.x,
-      y: event.clientY - boundingClientRect.y
+    additive: false, current: {x: 0, y: 0}, start: {x: 0, y: 0}
+  }
+
+  setBoardCoords(event, true)
+
+  marquee.value.additive = true
+}
+
+useEventListener(window, 'mousemove', (event) => {
+  if (marquee.value === null) {
+    return
+  }
+
+  setBoardCoords(event)
+
+  event.stopPropagation()
+})
+
+useEventListener(window, 'mouseup', (event) => {
+  if (marquee.value === null) {
+    return
+  }
+
+  console.log(marquee.value)
+
+})
+
+function setBoardCoords(e: MouseEvent, start: boolean = false) {
+  if (boardRef.value) {
+    const boundingClientRect = {
+      x: boardRef.value.getBoundingClientRect().left,
+      y: boardRef.value.getBoundingClientRect().top
+    }
+
+    if (start) {
+      marquee.value.start = {
+        x: e.clientX - boundingClientRect.x,
+        y: e.clientY - boundingClientRect.y
+      }
+    }
+
+    marquee.value.current = {
+      x: e.clientX - boundingClientRect.x,
+      y: e.clientY - boundingClientRect.y
     }
   }
 }
@@ -220,6 +257,13 @@ function updateCoords(tile : Tile, position: Position) {
       class="board"
       @mousedown="($event: MouseEvent) => handleMouseDown($event)"
   >
+    <div
+        class="marquee"
+        v-show="marquee"
+        :style="{ zIndex: frontMostTile + 1 }"
+    >
+
+    </div>
     <TileDraggable
         v-for="tile in tiles"
         :key="tile.id"
@@ -295,5 +339,10 @@ function updateCoords(tile : Tile, position: Position) {
 
 .selected {
   box-shadow: 2px 2px 2px rgb(255,215,0), 2px 2px 2px rgb(255,215,0);
+}
+
+.marquee {
+  position: absolute;
+  pointer-events: none;
 }
 </style>
