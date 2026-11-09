@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {type Ref, ref, useTemplateRef} from "vue";
+import {computed, type Ref, ref, useTemplateRef} from "vue";
 import {Tiles} from '@/data/tiles'
 import TileDraggable from "@/components/TileDraggable.vue";
 import type {Tile} from "@/types.ts";
@@ -160,10 +160,31 @@ useEventListener(window, 'mousemove', (event) => {
 
 })
 
+const rect = computed(() => {
+  if (marquee.value === null) {
+    return {
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+    }
+  }
+
+  return {
+    left: Math.min(marquee.value.start.x, marquee.value.current.x),
+    right: Math.max(marquee.value.start.x, marquee.value.current.x),
+    top: Math.min(marquee.value.start.y, marquee.value.current.y),
+    bottom: Math.max(marquee.value.start.y, marquee.value.current.y),
+  }
+});
+
 useEventListener(window, 'mouseup', () => {
   if (marquee.value === null) {
     return
   }
+
+  marquee.value = null
+
 })
 
 function clientToBoard(e: MouseEvent): Position {
@@ -178,6 +199,7 @@ function clientToBoard(e: MouseEvent): Position {
 
   throw new Error('We need a board in here, mount the board')
 }
+
 
 function flipTile(tile: Tile) {
   tile.isFaceUp = !tile.isFaceUp
@@ -251,9 +273,14 @@ function updateCoords(tile: Tile, position: Position) {
     <div
         class="marquee"
         v-show="marquee"
-        :style="{ zIndex: frontMostTile + 1 }"
+        :style="{
+          zIndex: frontMostTile + 1.,
+          top: rect.top + 'px',
+          left: rect.left + 'px',
+          width: `${Math.abs(rect.right - rect.left)}px`,
+          height: `${Math.abs(rect.bottom - rect.top)}px`,
+        }"
     >
-
     </div>
     <TileDraggable
         v-for="tile in tiles"
@@ -340,5 +367,6 @@ function updateCoords(tile: Tile, position: Position) {
 .marquee {
   position: absolute;
   pointer-events: none;
+  border: 2px dashed #ccc;
 }
 </style>
