@@ -40,4 +40,4 @@ watch(
   <div ref="el" :style="style" class="tile-wrapper">
     <slot />
   </div>
-</template>=
+</template>

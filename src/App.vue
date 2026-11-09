@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {type Ref, ref, useTemplateRef} from "vue";
-import { Tiles } from '@/data/tiles'
+import {Tiles} from '@/data/tiles'
 import TileDraggable from "@/components/TileDraggable.vue";
 import type {Tile} from "@/types.ts";
 import {type Position, useEventListener} from "@vueuse/core";
@@ -26,7 +26,11 @@ const frontMostTile = ref(Tiles.length)
 
 const selectedIds = ref(new Set<number>())
 
-const marquee: Ref<{current: {x: number, y: number}, start: {x: number, y: number}, additive: boolean} | null> = ref(null)
+const marquee: Ref<{
+  current: { x: number, y: number },
+  start: { x: number, y: number },
+  additive: boolean
+} | null> = ref(null)
 
 const dragStartPos: Ref<Position | null> = ref(null)
 const activeDragId: Ref<number | null> = ref(null)
@@ -36,7 +40,7 @@ const TILE_WIDTH = 50, TILE_HEIGHT = 72
 const TILE_PADDING = 10
 const TILES_PER_ROW = 14
 
-function getInitializedPosition(index : number) {
+function getInitializedPosition(index: number) {
   const TILE_SPACING_X = TILE_WIDTH + (TILE_PADDING - 1)
   const TILE_SPACING_Y = TILE_HEIGHT
   const col = index % TILES_PER_ROW;
@@ -51,8 +55,7 @@ function handleClick(e: MouseEvent, tile: Tile) {
   if (e.shiftKey) {
     if (selectedIds.value.has(tile.id)) {
       selectedIds.value.delete(tile.id)
-    }
-    else {
+    } else {
       selectedIds.value.add(tile.id)
     }
     return
@@ -120,13 +123,14 @@ function handleTileMove(position: Position, tile: Tile) {
     })
   }
 }
+
 function handleOnEnd(e: MouseEvent, tile: Tile) {
   activeDragId.value = null
   groupDragOrigin.value = new Map<number, Position>()
   dragStartPos.value = null
 
   if (!e.shiftKey && !(selectedIds.value.has(tile.id) && selectedIds.value.size > 1)) {
-      selectedIds.value = new Set([])
+    selectedIds.value = new Set([])
   }
 }
 
@@ -139,13 +143,12 @@ function handleMouseDown(event: MouseEvent) {
 
   event.preventDefault()
 
+  const point = clientToBoard(event)
   marquee.value = {
-    additive: false, current: {x: 0, y: 0}, start: {x: 0, y: 0}
+    start: point,
+    current: point,
+    additive: event.shiftKey,
   }
-
-  setBoardCoords(event, true)
-
-  marquee.value.additive = true
 }
 
 useEventListener(window, 'mousemove', (event) => {
@@ -153,9 +156,8 @@ useEventListener(window, 'mousemove', (event) => {
     return
   }
 
-  setBoardCoords(event)
+  marquee.value.current = clientToBoard(event)
 
-  event.stopPropagation()
 })
 
 useEventListener(window, 'mouseup', (event) => {
@@ -167,37 +169,29 @@ useEventListener(window, 'mouseup', (event) => {
 
 })
 
-function setBoardCoords(e: MouseEvent, start: boolean = false) {
+function clientToBoard(e: MouseEvent): Position {
   if (boardRef.value) {
-    const boundingClientRect = {
-      x: boardRef.value.getBoundingClientRect().left,
-      y: boardRef.value.getBoundingClientRect().top
-    }
+    const boundingClientRect = boardRef.value.getBoundingClientRect();
 
-    if (start) {
-      marquee.value.start = {
-        x: e.clientX - boundingClientRect.x,
-        y: e.clientY - boundingClientRect.y
-      }
-    }
-
-    marquee.value.current = {
-      x: e.clientX - boundingClientRect.x,
-      y: e.clientY - boundingClientRect.y
+    return {
+      x: e.clientX - boundingClientRect.left,
+      y: e.clientY - boundingClientRect.top
     }
   }
+
+  throw new Error('We need a board in here, mount the board')
 }
 
-function flipTile(tile : Tile) {
+function flipTile(tile: Tile) {
   tile.isFaceUp = !tile.isFaceUp
-  tile.rotationY = tile.isFaceUp ? 0: 180
+  tile.rotationY = tile.isFaceUp ? 0 : 180
 }
 
-function rotateTile(tile : Tile) {
+function rotateTile(tile: Tile) {
   tile.rotationZ = (tile.rotationZ ?? 0) === 0 ? 90 : 0;
 }
 
-function bringToFront(tile : Tile) {
+function bringToFront(tile: Tile) {
   tile.zIndex = frontMostTile.value
   frontMostTile.value += 1
 }
@@ -239,7 +233,7 @@ function shuffleAllTiles(arr: Array<Tile | undefined>) {
   }
 }
 
-function updateCoords(tile : Tile, position: Position) {
+function updateCoords(tile: Tile, position: Position) {
   tile.x = position.x;
   tile.y = position.y;
 }
@@ -285,7 +279,7 @@ function updateCoords(tile : Tile, position: Position) {
           :style="{ transform: `rotateY(${tile.rotationY}deg) rotateZ(${tile.rotationZ}deg)` }"
       >
         <div class="face front">
-          <img :src="tile.src" :alt="tile.name" />
+          <img :src="tile.src" :alt="tile.name"/>
         </div>
         <div class="face back"></div>
       </div>
@@ -300,11 +294,13 @@ function updateCoords(tile : Tile, position: Position) {
   perspective: 800px;
   min-height: 100vh;
 }
+
 .tile {
   position: absolute;
   width: v-bind('TILE_WIDTH + `px`');
   height: v-bind('TILE_HEIGHT + `px`');
 }
+
 .tile-3d {
   position: relative;
   width: 100%;
@@ -313,6 +309,7 @@ function updateCoords(tile : Tile, position: Position) {
   transition: transform 0.4s;
   cursor: pointer;
 }
+
 .face {
   position: absolute;
   inset: 0;
@@ -338,7 +335,7 @@ function updateCoords(tile : Tile, position: Position) {
 }
 
 .selected {
-  box-shadow: 2px 2px 2px rgb(255,215,0), 2px 2px 2px rgb(255,215,0);
+  box-shadow: 0 0 2px 2px rgb(255, 215, 0);
 }
 
 .marquee {
