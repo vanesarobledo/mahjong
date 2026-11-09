@@ -335,7 +335,9 @@ function updateCoords(tile: Tile, position: Position) {
 }
 
 .selected {
-  box-shadow: 0 0 2px 2px rgb(255, 215, 0);
+  outline: 3px rgb(255, 215, 0) solid;
+  outline-offset: -1px;
+  border-radius: 3px;
 }
 
 .marquee {
