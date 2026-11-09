@@ -160,13 +160,10 @@ useEventListener(window, 'mousemove', (event) => {
 
 })
 
-useEventListener(window, 'mouseup', (event) => {
+useEventListener(window, 'mouseup', () => {
   if (marquee.value === null) {
     return
   }
-
-  console.log(marquee.value)
-
 })
 
 function clientToBoard(e: MouseEvent): Position {
@@ -249,7 +246,7 @@ function updateCoords(tile: Tile, position: Position) {
   <div
       ref="board"
       class="board"
-      @mousedown="($event: MouseEvent) => handleMouseDown($event)"
+      @mousedown="handleMouseDown"
   >
     <div
         class="marquee"
@@ -268,11 +265,11 @@ function updateCoords(tile: Tile, position: Position) {
         :prevent-default="true"
         :class="{ selected: selectedIds.has(tile.id) }"
         :style="{ zIndex: tile.zIndex }"
-        @click="($event: MouseEvent) => handleClick($event, tile)"
+        @click="handleClick($event, tile)"
         @contextmenu.prevent="handleContextMenu(tile)"
         @pick="handlePick(tile)"
         @move="(position) => handleTileMove(position, tile)"
-        @end="($event: MouseEvent) => handleOnEnd($event, tile)"
+        @end="handleOnEnd($event, tile)"
     >
       <div
           class="tile-3d"
