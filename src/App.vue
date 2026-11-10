@@ -189,11 +189,11 @@ useEventListener(window, 'mouseup', () => {
     return
   }
 
-  // tiles.value.forEach((tile) => {
-  //   if (rectsIntersect(tileToReact(tile), rect.value)) {
-  //     selectedIds.value.add(tile.id)
-  //   }
-  // })
+  tiles.value.forEach((tile) => {
+    if (rectsIntersect(tileToRect(tile), rect.value)) {
+      selectedIds.value.add(tile.id)
+    }
+  })
 
   marquee.value = null
 
@@ -212,7 +212,7 @@ function clientToBoard(e: MouseEvent): Position {
   throw new Error('We need a board in here, mount the board')
 }
 
-function tileToReact(tile: Tile): Rect {
+function tileToRect(tile: Tile): Rect {
   return {
     left: tile.x,
     right: tile.x + TILE_WIDTH,
@@ -222,8 +222,8 @@ function tileToReact(tile: Tile): Rect {
 }
 
 function rectsIntersect(a: Rect, b: Rect): boolean {
-  const xOverlap = !(b.left > a.right) || !(b.right < a.left);
-  const yOverlap = !(b.top > a.bottom) || !(b.bottom < a.top);
+  const xOverlap = !(b.left > a.right) && !(b.right < a.left);
+  const yOverlap = !(b.top > a.bottom) && !(b.bottom < a.top);
 
   return xOverlap && yOverlap;
 }
