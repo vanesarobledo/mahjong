@@ -63,6 +63,7 @@ function handleClick(e: MouseEvent, tile: Tile) {
 
   if (dragStartPos.value) {
     if (Math.abs(dragStartPos.value.x - tile.x) >= 3 && Math.abs(dragStartPos.value.y - tile.y) >= 3) {
+      dragStartPos.value = null
       return
     }
   }
@@ -187,6 +188,18 @@ const rect = computed(() => {
 useEventListener(window, 'mouseup', () => {
   if (marquee.value === null) {
     return
+  }
+
+  let dx = Math.abs(marquee.value.current.x - marquee.value.start.x)
+  let dy = Math.abs(marquee.value.current.y - marquee.value.start.y)
+
+  if (Math.hypot(dx, dy) <= 3) {
+    marquee.value = null;
+    return
+  }
+
+  if (!marquee.value.additive) {
+      selectedIds.value = new Set([]);
   }
 
   tiles.value.forEach((tile) => {
