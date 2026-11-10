@@ -137,7 +137,7 @@ function handleOnEnd(e: MouseEvent, tile: Tile) {
   // dragStartPos.value = null
 
   if (!e.shiftKey && !(selectedIds.value.has(tile.id) && selectedIds.value.size > 1)) {
-    selectedIds.value = new Set([])
+    resetSelection()
   }
 }
 
@@ -199,7 +199,7 @@ useEventListener(window, 'mouseup', () => {
   }
 
   if (!marquee.value.additive) {
-      selectedIds.value = new Set([]);
+    resetSelection()
   }
 
   tiles.value.forEach((tile) => {
@@ -267,12 +267,12 @@ function orderTiles() {
   })
 }
 
-function resetGame() {
+function shuffleTiles() {
   const board = boardRef.value;
   const boardWidth = board ? board.clientWidth : 800;
   const boardHeight = board ? board.clientHeight : 1000;
 
-  shuffleAllTiles(tiles.value)
+  randomizeTiles(tiles.value)
 
   tiles.value.forEach(tile => {
     tile.isFaceUp = false
@@ -284,12 +284,16 @@ function resetGame() {
 
 }
 
-function shuffleAllTiles(arr: Array<Tile | undefined>) {
+function randomizeTiles(arr: Array<Tile | undefined>) {
 // Fisher-Yates Shuffle
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]]
   }
+}
+
+function resetSelection() {
+  selectedIds.value = new Set([]);
 }
 
 function updateCoords(tile: Tile, position: Position) {
@@ -302,8 +306,9 @@ function updateCoords(tile: Tile, position: Position) {
 <template>
   <h1>Mahjong Test</h1>
 
-  <button @click="resetGame()">Shuffle Tiles</button>
-  <button @click="orderTiles()">Order Tiles</button>
+  <button @click="shuffleTiles">Shuffle Tiles</button>
+  <button @click="orderTiles">Order Tiles</button>
+  <button @click="resetSelection">Reset Selection</button>
 
   <div
       ref="board"
