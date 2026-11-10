@@ -62,7 +62,9 @@ function handleClick(e: MouseEvent, tile: Tile) {
   }
 
   if (dragStartPos.value) {
-    if (Math.abs(dragStartPos.value.x - tile.x) >= 3 && Math.abs(dragStartPos.value.y - tile.y) >= 3) {
+    let dx = Math.abs(dragStartPos.value.x - tile.x)
+    let dy =  Math.abs(dragStartPos.value.y - tile.y)
+    if (Math.hypot(dx, dy) >= 3) {
       dragStartPos.value = null
       return
     }
@@ -134,7 +136,7 @@ function handleTileMove(position: Position, tile: Tile) {
 function handleOnEnd(e: MouseEvent, tile: Tile) {
   activeDragId.value = null
   groupDragOrigin.value = new Map<number, Position>()
-  // dragStartPos.value = null
+  dragStartPos.value = null
 
   if (!e.shiftKey && !(selectedIds.value.has(tile.id) && selectedIds.value.size > 1)) {
     resetSelection()
@@ -193,13 +195,13 @@ useEventListener(window, 'mouseup', () => {
   let dx = Math.abs(marquee.value.current.x - marquee.value.start.x)
   let dy = Math.abs(marquee.value.current.y - marquee.value.start.y)
 
+  if (!marquee.value.additive) {
+    resetSelection()
+  }
+
   if (Math.hypot(dx, dy) <= 3) {
     marquee.value = null;
     return
-  }
-
-  if (!marquee.value.additive) {
-    resetSelection()
   }
 
   tiles.value.forEach((tile) => {
