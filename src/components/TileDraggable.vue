@@ -9,7 +9,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'pick'): void,
+  (e: 'pick', position: Position): void,
   (e: 'move', position: Position): void,
   (e: 'end', event: MouseEvent): void
 }>()
@@ -19,7 +19,7 @@ const { x, y, position, style } = useDraggable(el, {
   initialValue: { x: props.initialX, y: props.initialY },
   containerElement: () => props.containerRef,
   preventDefault: true,
-  onStart: () => emit('pick'),
+  onStart: (position) => emit('pick', position),
   onMove: (position) => emit('move', position),
   onEnd: (position, event) => emit('end', event)
 })

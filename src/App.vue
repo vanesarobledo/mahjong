@@ -2,7 +2,7 @@
 import {computed, type Ref, ref, useTemplateRef} from "vue";
 import {Tiles} from '@/data/tiles'
 import TileDraggable from "@/components/TileDraggable.vue";
-import type {Tile} from "@/types.ts";
+import type {Tile, Rect} from "@/types.ts";
 import {type Position, useEventListener} from "@vueuse/core";
 
 const boardRef = useTemplateRef('board')
@@ -61,6 +61,12 @@ function handleClick(e: MouseEvent, tile: Tile) {
     return
   }
 
+  if (dragStartPos.value) {
+    if (Math.abs(dragStartPos.value.x - tile.x) >= 3 && Math.abs(dragStartPos.value.y - tile.y) >= 3) {
+      return
+    }
+  }
+
   flipTile(tile);
 }
 
@@ -68,13 +74,13 @@ function handleContextMenu(tile: Tile) {
   rotateTile(tile);
 }
 
-function handlePick(tile: Tile) {
-  if (selectedIds.value.has(tile.id) && selectedIds.value.size > 1) {
-    dragStartPos.value = {
-      x: tile.x,
-      y: tile.y
-    }
+function handlePick(tile: Tile, position: Position) {
+  dragStartPos.value = {
+    x: tile.x,
+    y: tile.y
+  }
 
+  if (selectedIds.value.has(tile.id) && selectedIds.value.size > 1) {
     activeDragId.value = tile.id
 
     let groupTiles: Tile[] = []
@@ -127,7 +133,7 @@ function handleTileMove(position: Position, tile: Tile) {
 function handleOnEnd(e: MouseEvent, tile: Tile) {
   activeDragId.value = null
   groupDragOrigin.value = new Map<number, Position>()
-  dragStartPos.value = null
+  // dragStartPos.value = null
 
   if (!e.shiftKey && !(selectedIds.value.has(tile.id) && selectedIds.value.size > 1)) {
     selectedIds.value = new Set([])
@@ -183,6 +189,12 @@ useEventListener(window, 'mouseup', () => {
     return
   }
 
+  // tiles.value.forEach((tile) => {
+  //   if (rectsIntersect(tileToReact(tile), rect.value)) {
+  //     selectedIds.value.add(tile.id)
+  //   }
+  // })
+
   marquee.value = null
 
 })
@@ -200,6 +212,21 @@ function clientToBoard(e: MouseEvent): Position {
   throw new Error('We need a board in here, mount the board')
 }
 
+function tileToReact(tile: Tile): Rect {
+  return {
+    left: tile.x,
+    right: tile.x + TILE_WIDTH,
+    top: tile.y,
+    bottom: tile.y + TILE_HEIGHT,
+  }
+}
+
+function rectsIntersect(a: Rect, b: Rect): boolean {
+  const xOverlap = !(b.left > a.right) || !(b.right < a.left);
+  const yOverlap = !(b.top > a.bottom) || !(b.bottom < a.top);
+
+  return xOverlap && yOverlap;
+}
 
 function flipTile(tile: Tile) {
   tile.isFaceUp = !tile.isFaceUp
@@ -274,7 +301,7 @@ function updateCoords(tile: Tile, position: Position) {
         class="marquee"
         v-show="marquee"
         :style="{
-          zIndex: frontMostTile + 1.,
+          zIndex: frontMostTile + 1,
           top: rect.top + 'px',
           left: rect.left + 'px',
           width: `${Math.abs(rect.right - rect.left)}px`,
@@ -294,7 +321,7 @@ function updateCoords(tile: Tile, position: Position) {
         :style="{ zIndex: tile.zIndex }"
         @click="handleClick($event, tile)"
         @contextmenu.prevent="handleContextMenu(tile)"
-        @pick="handlePick(tile)"
+        @pick="(position) => handlePick(tile, position)"
         @move="(position) => handleTileMove(position, tile)"
         @end="handleOnEnd($event, tile)"
     >
