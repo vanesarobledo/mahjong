@@ -2,8 +2,8 @@
 import {computed, type Ref, ref, useTemplateRef} from "vue";
 import {Tiles} from '@/data/tiles'
 import TileDraggable from "@/components/TileDraggable.vue";
-import type {Tile, Rect} from "@/types.ts";
-import {type Position, useEventListener} from "@vueuse/core";
+import type {Tile, Rect, Point} from "@/types.ts";
+import {useEventListener} from "@vueuse/core";
 
 const boardRef = useTemplateRef('board')
 
@@ -27,18 +27,19 @@ const frontMostTile = ref(Tiles.length)
 const selectedIds = ref(new Set<number>())
 
 const marquee: Ref<{
-  current: { x: number, y: number },
-  start: { x: number, y: number },
+  current: Point,
+  start: Point,
   additive: boolean
 } | null> = ref(null)
 
-const dragStartPos: Ref<Position | null> = ref(null)
+const dragStartPos: Ref<Point | null> = ref(null)
 const activeDragId: Ref<number | null> = ref(null)
-const groupDragOrigin: Ref<Map<number, Position>> = ref(new Map<number, Position>)
+const groupDragOrigin: Ref<Map<number, Point>> = ref(new Map<number, Point>)
 
 const TILE_WIDTH = 50, TILE_HEIGHT = 72
 const TILE_PADDING = 10
 const TILES_PER_ROW = 14
+const DRAG_THRESHOLD = 3;
 
 function getInitializedPosition(index: number) {
   const TILE_SPACING_X = TILE_WIDTH + (TILE_PADDING - 1)
@@ -62,9 +63,7 @@ function handleClick(e: MouseEvent, tile: Tile) {
   }
 
   if (dragStartPos.value) {
-    let dx = Math.abs(dragStartPos.value.x - tile.x)
-    let dy =  Math.abs(dragStartPos.value.y - tile.y)
-    if (Math.hypot(dx, dy) >= 3) {
+    if (hasMoved(dragStartPos.value, tile)) {
       dragStartPos.value = null
       return
     }
@@ -77,7 +76,7 @@ function handleContextMenu(tile: Tile) {
   rotateTile(tile);
 }
 
-function handlePick(tile: Tile, position: Position) {
+function handlePick(tile: Tile) {
   dragStartPos.value = {
     x: tile.x,
     y: tile.y
@@ -116,7 +115,7 @@ function restackTiles(group: Array<Tile>) {
   group.forEach(bringToFront)
 }
 
-function handleTileMove(position: Position, tile: Tile) {
+function handleTileMove(position: Point, tile: Tile) {
   updateCoords(tile, position)
 
   if (activeDragId.value === tile.id) {
@@ -135,8 +134,7 @@ function handleTileMove(position: Position, tile: Tile) {
 
 function handleOnEnd(e: MouseEvent, tile: Tile) {
   activeDragId.value = null
-  groupDragOrigin.value = new Map<number, Position>()
-  dragStartPos.value = null
+  groupDragOrigin.value = new Map<number, Point>()
 
   if (!e.shiftKey && !(selectedIds.value.has(tile.id) && selectedIds.value.size > 1)) {
     resetSelection()
@@ -192,14 +190,11 @@ useEventListener(window, 'mouseup', () => {
     return
   }
 
-  let dx = Math.abs(marquee.value.current.x - marquee.value.start.x)
-  let dy = Math.abs(marquee.value.current.y - marquee.value.start.y)
-
   if (!marquee.value.additive) {
     resetSelection()
   }
 
-  if (Math.hypot(dx, dy) <= 3) {
+  if (!hasMoved(marquee.value.start, marquee.value.current)) {
     marquee.value = null;
     return
   }
@@ -214,7 +209,7 @@ useEventListener(window, 'mouseup', () => {
 
 })
 
-function clientToBoard(e: MouseEvent): Position {
+function clientToBoard(e: MouseEvent): Point {
   if (boardRef.value) {
     const boundingClientRect = boardRef.value.getBoundingClientRect();
 
@@ -243,13 +238,20 @@ function rectsIntersect(a: Rect, b: Rect): boolean {
   return xOverlap && yOverlap;
 }
 
+function hasMoved(from: Point, to: Point): boolean {
+  let dx = to.x - from.x;
+  let dy = to.y - from.y;
+
+  return Math.hypot(dx, dy) > DRAG_THRESHOLD
+}
+
 function flipTile(tile: Tile) {
   tile.isFaceUp = !tile.isFaceUp
   tile.rotationY = tile.isFaceUp ? 0 : 180
 }
 
 function rotateTile(tile: Tile) {
-  tile.rotationZ = (tile.rotationZ ?? 0) === 0 ? 90 : 0;
+  tile.rotationZ = (tile.rotationZ) === 0 ? 90 : 0;
 }
 
 function bringToFront(tile: Tile) {
@@ -262,7 +264,7 @@ function orderTiles() {
     const pos = getInitializedPosition(tile.id)
     tile.rotationY = 0
     tile.rotationZ = 0
-    tile.isFaceUp = false
+    tile.isFaceUp = true
     tile.x = pos.x
     tile.y = pos.y
     tile.zIndex = tile.id
@@ -274,7 +276,7 @@ function shuffleTiles() {
   const boardWidth = board ? board.clientWidth : 800;
   const boardHeight = board ? board.clientHeight : 1000;
 
-  randomizeTiles(tiles.value)
+  shuffle(tiles.value)
 
   tiles.value.forEach(tile => {
     tile.isFaceUp = false
@@ -286,11 +288,12 @@ function shuffleTiles() {
 
 }
 
-function randomizeTiles(arr: Array<Tile | undefined>) {
+function shuffle<T>(arr: T[]) {
 // Fisher-Yates Shuffle
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]]
+    // i and j are always in-bounds
+    [arr[i], arr[j]] = [arr[j]!, arr[i]!]
   }
 }
 
@@ -298,7 +301,7 @@ function resetSelection() {
   selectedIds.value = new Set([]);
 }
 
-function updateCoords(tile: Tile, position: Position) {
+function updateCoords(tile: Tile, position: Point) {
   tile.x = position.x;
   tile.y = position.y;
 }
@@ -324,8 +327,8 @@ function updateCoords(tile: Tile, position: Position) {
           zIndex: frontMostTile + 1,
           top: rect.top + 'px',
           left: rect.left + 'px',
-          width: `${Math.abs(rect.right - rect.left)}px`,
-          height: `${Math.abs(rect.bottom - rect.top)}px`,
+          width: `${rect.right - rect.left}px`,
+          height: `${rect.bottom - rect.top}px`,
         }"
     >
     </div>
@@ -341,7 +344,7 @@ function updateCoords(tile: Tile, position: Position) {
         :style="{ zIndex: tile.zIndex }"
         @click="handleClick($event, tile)"
         @contextmenu.prevent="handleContextMenu(tile)"
-        @pick="(position) => handlePick(tile, position)"
+        @pick="handlePick(tile)"
         @move="(position) => handleTileMove(position, tile)"
         @end="handleOnEnd($event, tile)"
     >
