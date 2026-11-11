@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ref, useTemplateRef} from "vue";
+import {type Ref, ref, useTemplateRef} from "vue";
 import {Tiles} from '@/data/tiles'
 import TileDraggable from "@/components/TileDraggable.vue";
 import type {Tile} from "@/types.ts";
@@ -9,7 +9,6 @@ import {flipTile, rotateTile} from "@/utils/tileActions.ts";
 import {shuffle} from "@/utils/shuffle.ts";
 import {useMarquee} from "@/composables/useMarquee.ts";
 import {useSelection} from "@/composables/useSelection.ts";
-import {useGroupDrag} from "@/composables/useGroupDrag.ts";
 
 const boardRef = useTemplateRef('board')
 
@@ -29,10 +28,12 @@ const tiles = ref(
 )
 
 const frontMostTile = ref(Tiles.length)
+const dragStartPos: Ref<Point | null> = ref(null)
+const activeDragId: Ref<number | null> = ref(null)
+const groupDragOrigin = ref(new Map<number, Point>)
 
 const selection = useSelection();
 const {marquee, rect, handleMouseDown} = useMarquee(boardRef, tiles, selection)
-const {dragStartPos, activeDragId, groupDragOrigin} = useGroupDrag();
 
 function getInitializedPosition(index: number) {
   const TILE_SPACING_X = TILE_WIDTH + (TILE_PADDING - 1)
