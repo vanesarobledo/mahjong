@@ -117,7 +117,7 @@ Each phase: write the listed tests first (red), then the code (green), then refa
 
 ### Phase 0 — Scaffold Vitest
 
-Plan: Claude scaffolds Vitest (config, `test` script, one smoke test). **Not done yet** — wait until implementation starts or it's asked for directly.
+**Done.** Vitest is scaffolded: `vitest.config.ts` (merges `vite.config.ts`, so the `@` alias works), `tsconfig.vitest.json`, a `test` script, and a smoke test at `src/utils/__tests__/geometry.spec.ts`. Put new specs in `src/utils/__tests__/` (e.g. `wall.spec.ts`).
 
 ### Phase 1 — Slot geometry (no break)
 

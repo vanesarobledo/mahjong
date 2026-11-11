@@ -30,6 +30,7 @@ Scope is split into two tiers below: **Near-term** (setup/bookkeeping helpers, b
 
 - **Vue 3** (`<script setup>`, Composition API, TypeScript)
 - **@vueuse/core** — `useDraggable` (used directly as a composable, not the `<UseDraggable>` wrapper component — see below for why) and `useEventListener` (window-level listeners for the marquee gesture, auto-cleaned on unmount)
+- **Vitest** — unit tests for pure `utils/` functions. Specs live in `src/**/__tests__/*.spec.ts` (excluded from the app tsconfig, type-checked via `tsconfig.vitest.json`). Node environment for now; switch to `jsdom` + `@vue/test-utils` only when a test needs to mount components. Run with `npm test`.
 - Tile art: SVGs from the [FluffyStuff/riichi-mahjong-tiles](https://github.com/FluffyStuff/riichi-mahjong-tiles) repo, `Regular` tile set, served from `/img/tiles/`
 
 ## Data layer
