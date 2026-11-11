@@ -15,14 +15,3 @@ export type TileData = {
     src: string;
     name: string;
 }
-
-export type Point = {
-    x: number, y: number
-}
-
-export type Rect = {
-    top: number,
-    right: number,
-    left: number,
-    bottom: number
-}

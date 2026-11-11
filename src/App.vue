@@ -2,8 +2,9 @@
 import {computed, type Ref, ref, useTemplateRef} from "vue";
 import {Tiles} from '@/data/tiles'
 import TileDraggable from "@/components/TileDraggable.vue";
-import type {Tile, Rect, Point} from "@/types.ts";
+import type {Tile} from "@/types.ts";
 import {useEventListener} from "@vueuse/core";
+import {hasMoved, rectsIntersect, type Point, type Rect} from "@/utils/geometry.ts";
 
 const boardRef = useTemplateRef('board')
 
@@ -63,7 +64,7 @@ function handleClick(e: MouseEvent, tile: Tile) {
   }
 
   if (dragStartPos.value) {
-    if (hasMoved(dragStartPos.value, tile)) {
+    if (hasMoved(dragStartPos.value, tile, DRAG_THRESHOLD)) {
       dragStartPos.value = null
       return
     }
@@ -194,7 +195,7 @@ useEventListener(window, 'mouseup', () => {
     resetSelection()
   }
 
-  if (!hasMoved(marquee.value.start, marquee.value.current)) {
+  if (!hasMoved(marquee.value.start, marquee.value.current, DRAG_THRESHOLD)) {
     marquee.value = null;
     return
   }
@@ -229,20 +230,6 @@ function tileToRect(tile: Tile): Rect {
     top: tile.y,
     bottom: tile.y + TILE_HEIGHT,
   }
-}
-
-function rectsIntersect(a: Rect, b: Rect): boolean {
-  const xOverlap = !(b.left > a.right) && !(b.right < a.left);
-  const yOverlap = !(b.top > a.bottom) && !(b.bottom < a.top);
-
-  return xOverlap && yOverlap;
-}
-
-function hasMoved(from: Point, to: Point): boolean {
-  let dx = to.x - from.x;
-  let dy = to.y - from.y;
-
-  return Math.hypot(dx, dy) > DRAG_THRESHOLD
 }
 
 function flipTile(tile: Tile) {
