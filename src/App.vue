@@ -8,6 +8,7 @@ import {DRAG_THRESHOLD, TILE_HEIGHT, TILE_PADDING, TILE_WIDTH, TILES_PER_ROW} fr
 import {flipTile, rotateTile} from "@/utils/tileActions.ts";
 import {shuffle} from "@/utils/shuffle.ts";
 import {useMarquee} from "@/composables/useMarquee.ts";
+import {useSelection} from "@/composables/useSelection.ts";
 
 const boardRef = useTemplateRef('board')
 
@@ -27,9 +28,9 @@ const tiles = ref(
 )
 
 const frontMostTile = ref(Tiles.length)
-const selectedIds = ref(new Set<number>())
 
-const {marquee, rect, handleMouseDown} = useMarquee(boardRef, tiles, selectedIds, resetSelection)
+const selection = useSelection();
+const {marquee, rect, handleMouseDown} = useMarquee(boardRef, tiles, selection)
 
 const dragStartPos: Ref<Point | null> = ref(null)
 const activeDragId: Ref<number | null> = ref(null)
@@ -48,11 +49,7 @@ function getInitializedPosition(index: number) {
 
 function handleClick(e: MouseEvent, tile: Tile) {
   if (e.shiftKey) {
-    if (selectedIds.value.has(tile.id)) {
-      selectedIds.value.delete(tile.id)
-    } else {
-      selectedIds.value.add(tile.id)
-    }
+    selection.toggle(tile.id)
     return
   }
 
@@ -76,12 +73,12 @@ function handlePick(tile: Tile) {
     y: tile.y
   }
 
-  if (selectedIds.value.has(tile.id) && selectedIds.value.size > 1) {
+  if (selection.isInSelection(tile.id)) {
     activeDragId.value = tile.id
 
     let groupTiles: Tile[] = []
 
-    selectedIds.value.forEach((id) => {
+    selection.selectedIds.value.forEach((id) => {
       if (id === tile.id) {
         return;
       }
@@ -130,8 +127,8 @@ function handleOnEnd(e: MouseEvent, tile: Tile) {
   activeDragId.value = null
   groupDragOrigin.value = new Map<number, Point>()
 
-  if (!e.shiftKey && !(selectedIds.value.has(tile.id) && selectedIds.value.size > 1)) {
-    resetSelection()
+  if (!e.shiftKey && !selection.isInSelection(tile.id)) {
+    selection.reset()
   }
 }
 
@@ -172,10 +169,6 @@ function shuffleTiles() {
   frontMostTile.value = Tiles.length;
 }
 
-function resetSelection() {
-  selectedIds.value = new Set([]);
-}
-
 function updateCoords(tile: Tile, position: Point) {
   tile.x = position.x;
   tile.y = position.y;
@@ -188,7 +181,7 @@ function updateCoords(tile: Tile, position: Point) {
 
   <button @click="shuffleTiles">Shuffle Tiles</button>
   <button @click="orderTiles">Order Tiles</button>
-  <button @click="resetSelection">Reset Selection</button>
+  <button @click="selection.reset">Reset Selection</button>
 
   <div
       ref="board"
@@ -215,7 +208,7 @@ function updateCoords(tile: Tile, position: Point) {
         :initial-x="tile.x"
         :initial-y="tile.y"
         :prevent-default="true"
-        :class="{ selected: selectedIds.has(tile.id) }"
+        :class="{ selected: selection.selectedIds.value.has(tile.id) }"
         :style="{ zIndex: tile.zIndex }"
         @click="handleClick($event, tile)"
         @contextmenu.prevent="handleContextMenu(tile)"

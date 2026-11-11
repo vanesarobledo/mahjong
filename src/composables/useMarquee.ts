@@ -3,12 +3,12 @@ import {hasMoved, type Point, rectsIntersect, tileToRect} from "@/utils/geometry
 import type {Tile} from "@/types.ts";
 import {useEventListener} from "@vueuse/core";
 import {DRAG_THRESHOLD} from "@/constants.ts";
+import type {useSelection} from "@/composables/useSelection.ts";
 
 export function useMarquee(
     boardRef: ShallowRef<HTMLDivElement | null>,
     tiles: Ref<Array<Tile>>,
-    selectedIds: Ref<Set<number>>,
-    resetSelection: () => void
+    selection: ReturnType<typeof useSelection>,
 ) {
     const marquee: Ref<{
         current: Point,
@@ -78,7 +78,7 @@ export function useMarquee(
         }
 
         if (!marquee.value.additive) {
-            resetSelection()
+            selection.reset()
         }
 
         if (!hasMoved(marquee.value.start, marquee.value.current, DRAG_THRESHOLD)) {
@@ -88,12 +88,13 @@ export function useMarquee(
 
         tiles.value.forEach((tile) => {
             if (rectsIntersect(tileToRect(tile), rect.value)) {
-                selectedIds.value.add(tile.id)
+                selection.addId(tile.id)
             }
         })
 
         marquee.value = null
     })
+
     return {
         marquee, rect, handleMouseDown
     }
