@@ -5,6 +5,7 @@ import TileDraggable from "@/components/TileDraggable.vue";
 import type {Tile} from "@/types.ts";
 import {useEventListener} from "@vueuse/core";
 import {hasMoved, rectsIntersect, type Point, type Rect} from "@/utils/geometry.ts";
+import {TILE_HEIGHT, TILE_WIDTH, TILE_PADDING, TILES_PER_ROW, DRAG_THRESHOLD} from "@/constants.ts";
 
 const boardRef = useTemplateRef('board')
 
@@ -36,11 +37,6 @@ const marquee: Ref<{
 const dragStartPos: Ref<Point | null> = ref(null)
 const activeDragId: Ref<number | null> = ref(null)
 const groupDragOrigin: Ref<Map<number, Point>> = ref(new Map<number, Point>)
-
-const TILE_WIDTH = 50, TILE_HEIGHT = 72
-const TILE_PADDING = 10
-const TILES_PER_ROW = 14
-const DRAG_THRESHOLD = 3;
 
 function getInitializedPosition(index: number) {
   const TILE_SPACING_X = TILE_WIDTH + (TILE_PADDING - 1)
