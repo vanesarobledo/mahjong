@@ -14,6 +14,7 @@ Scope is split into two tiers below: **Near-term** (setup/bookkeeping helpers, b
 
 ### Near-term scope
 
+- **Multi-select & group drag** *(implemented; manual verification pending)*: shift+click toggles a tile in the selection, and dragging on empty board draws a marquee that selects every tile it touches. Dragging any tile in a multi-tile selection moves the whole group. This is a convenience for moving several tiles at once (e.g. hand-dealing). It never restricts where tiles can go. See decisions 8–12; the build log is `docs/multi-select-drag-plan.md`.
 - **Wall / dead-wall auto-build**: an action arranges all 136 tiles into a physically-accurate 4-wall square (17 stacked pairs per seat), with the 14-tile dead wall split off from a corner — matching how a real game is built. Requires a real wall data model (each tile's position in the wall, live vs. dead).
 - **Hand zones**: four labeled per-seat regions. Dealing into them can optionally be automated (a "deal" helper draws starting tiles from the wall into each hand), but manual drag-to-fill remains fully supported — dealing is a convenience.
 - **Swap mode**: a dedicated cheat gesture — click "swap," then click two tiles — exchanges their positions/identities in one step, on top of the free drag-anywhere that already works today.
@@ -28,29 +29,57 @@ Scope is split into two tiers below: **Near-term** (setup/bookkeeping helpers, b
 ## Tech stack
 
 - **Vue 3** (`<script setup>`, Composition API, TypeScript)
-- **@vueuse/core** — specifically `useDraggable` (used directly as a composable, not the `<UseDraggable>` wrapper component — see below for why)
+- **@vueuse/core** — `useDraggable` (used directly as a composable, not the `<UseDraggable>` wrapper component — see below for why) and `useEventListener` (window-level listeners for the marquee gesture, auto-cleaned on unmount)
 - Tile art: SVGs from the [FluffyStuff/riichi-mahjong-tiles](https://github.com/FluffyStuff/riichi-mahjong-tiles) repo, `Regular` tile set, served from `/img/tiles/`
 
 ## Data layer
 
-`src/data/tiles.js` — a static JSON array of the 136-tile riichi set:
-```
-{ id: number, src: string, name: string }
+`src/data/tiles.ts` — a static, typed array (`Array<TileData>`) of the 136-tile riichi set:
+```ts
+type TileData = { id: number, src: string, name: string }
 ```
 - 4 copies of each suit tile (Man/Pin/Sou 1–9), except 5s: 3 regular + 1 `-Dora` variant (red five) per suit — 3 + 1 = 4, matching standard tile counts
 - 4 copies of each honour tile (Ton, Nan, Shaa, Pei, Hatsu, Chun, Haku)
 - Ordered: Man → Pin → Sou → Ton → Nan → Shaa → Pei → Hatsu → Chun → Haku
 - `name` is the filename without extension (e.g. `Man5-Dora`)
-- This is purely descriptive data — **no position, rotation, or game state lives here**. Runtime state (x, y, zIndex, isFaceUp, rotationY, rotationZ) is added to each tile object at component-mount time in the parent's `ref()`.
+- This is purely descriptive data — **no position, rotation, or game state lives here**. Runtime state is added to each tile object at mount time in the parent's `ref()`, producing the `Tile` type (`src/types.ts`): `TileData` + `x`, `y`, `zIndex`, `isFaceUp`, `rotationY`, `rotationZ`.
+
+## Source layout
+
+```
+src/
+  App.vue                     board: owns tiles, z-order counter, all cross-tile handlers
+  components/TileDraggable.vue  one per tile; wraps useDraggable, emits pick/move/end
+  composables/
+    useSelection.ts           Set<id> of selected tiles + toggle/addId/reset/isInGroup
+    useMarquee.ts             drag-on-empty-board box select (gesture, rect, hit-test, commit)
+    useGroupDrag.ts           group-drag bookkeeping refs (dragStartPos, activeDragId, groupDragOrigin)
+  utils/
+    geometry.ts               Point/Rect types, rectsIntersect, hasMoved, tileToRect
+    tileActions.ts            flipTile, rotateTile (pure per-tile mutations)
+    shuffle.ts                generic in-place Fisher-Yates
+  constants.ts                TILE_WIDTH/HEIGHT/PADDING, TILES_PER_ROW, DRAG_THRESHOLD
+  types.ts                    Tile, TileData
+  data/tiles.ts               static 136-tile set
+```
+
+- **Composables hold stateful, Vue-reactive concerns; `utils/` holds pure functions.** `geometry.ts` and `tileActions.ts` take plain values/objects and know nothing about refs, so they can be reasoned about (and tested) without mounting anything.
+- **Composables are wired together explicitly in `App.vue`**, not by importing each other's state. `useMarquee(boardRef, tiles, selection)` receives the selection object returned by `useSelection()` as an argument (typed via `ReturnType<typeof useSelection>`), so there's exactly one selection instance and its owner is visible at the call site.
+- `useGroupDrag` currently only *declares* the group-drag refs; the logic that reads/writes them (`handlePick`, `handleTileMove`, `handleOnEnd`) still lives in `App.vue`, because it also needs `tiles`, `selection`, and `bringToFront`. See open items.
 
 ## Component architecture
 
 **Two-component split**, chosen specifically to work around a vueuse limitation:
 
-- **Parent (board component):** owns the `tiles` ref (array of tile+state objects), owns `boardRef` (template ref to the `.board` container), and owns all cross-tile logic — flip, bring-to-front, shuffle/reset.
-- **`TileDraggable.vue` (child, one per tile):** wraps a single tile's `useDraggable()` call. Receives `initialX`/`initialY`/`containerRef` as props, emits `pick` (on drag start) up to the parent.
+- **Parent (`App.vue`, the board):** owns the `tiles` ref (array of `Tile`), owns `boardRef` (template ref to the `.board` container), owns the `frontMostTile` z-order counter, and owns all cross-tile logic — flip, rotate, bring-to-front, selection, group drag, marquee, shuffle/order.
+- **`TileDraggable.vue` (child, one per tile):** wraps a single tile's `useDraggable()` call. Receives `initialX`/`initialY`/`containerRef` as props and emits three lifecycle events up to the parent:
+  - `pick` — from `onStart` (pointerdown)
+  - `move(position)` — from `onMove`, every frame of a drag
+  - `end(event)` — from `onEnd` (pointerup), carrying the native event so the parent can read `shiftKey`
 
 **Why a custom child component instead of the `<UseDraggable>` component from `@vueuse/components`:** that wrapper component doesn't expose the `containerElement` option, which is required to make `position: absolute` dragging behave correctly relative to a parent container instead of the viewport. Using the `useDraggable` composable directly, inside a small wrapper component, was the only way to access that option.
+
+**Position flows in both directions.** Parent → child via `initialX`/`initialY` props + a `watch` (used by shuffle/order and by group drag to move tiles that aren't being dragged). Child → parent via the `move` emit (so the parent's `tile.x`/`tile.y` is always the tile's real on-screen position). See decisions 5 and 8.
 
 ## Key architectural decisions (and the bugs that motivated them)
 
@@ -61,28 +90,64 @@ Scope is split into two tiers below: **Near-term** (setup/bookkeeping helpers, b
    - *Why:* Vue reuses component instances across re-renders when a stable `:key` is used, which is required so each tile's internal drag position (state living *inside* `useDraggable`, not in the parent array) survives array reordering (e.g. shuffle).
 
 3. **"Bring to front" (z-ordering) is implemented via a numeric `zIndex` on each tile, not DOM order.** 
-   - Each tile gets `zIndex: index` at construction. A single counter in the parent holds the next top value; on pick (drag start / `onStart`), the picked tile is assigned the counter's value and the counter increments. The value is bound as `:style="{ zIndex }"` on `<TileDraggable>`, which Vue merges with the `left`/`top` style `useDraggable` sets on the child's root element (fallthrough `style` merging).
+   - Each tile gets `zIndex: index` at construction. A single counter in the parent (`frontMostTile`) holds the next top value; on pick (drag start / `onStart`), the picked tile is assigned the counter's value and the counter increments. The value is bound as `:style="{ zIndex }"` on `<TileDraggable>`, which Vue merges with the `left`/`top` style `useDraggable` sets on the child's root element (fallthrough `style` merging).
+   - `orderTiles()` and `shuffleTiles()` reset every tile's `zIndex` to its `id` and reset the counter to `Tiles.length`, so z-index values don't grow across games.
    - *Bug this fixed:* the earlier version spliced the picked tile out of the `tiles` array and pushed it to the end, letting DOM paint order decide stacking. Because the `v-for` is keyed, Vue physically moved that tile's DOM node during `pointerdown`. The browser then didn't deliver the following `click` to the moved node, so the first click on any tile that wasn't already last in the array was swallowed — shift-click selection (and plain-click flip) needed two clicks. With `zIndex`, the DOM never moves on pick, so `click` fires reliably.
-   - *Alternative considered:* keep a separate `stackOrder` array of ids and derive z-index from each id's position in it (keeps values small, but costs an `indexOf` per lookup). The counter was chosen for simplicity; its unbounded growth is irrelevant in practice (browser z-index max is a 32-bit int).
+   - *Alternative considered:* keep a separate `stackOrder` array of ids and derive z-index from each id's position in it (keeps values small, but costs an `indexOf` per lookup). The counter was chosen for simplicity; its growth within a game is irrelevant in practice (browser z-index max is a 32-bit int).
 
 4. **Tile position (`x`, `y`) is stored on the tile object itself, not derived from array index.** 
-   - *Bug this fixed:* an earlier version computed each tile's initial position from its index in the array (`getInitializedPosition(index)`). Once array reordering was introduced (bring-to-front), every tile's index shifted, which cascaded into every subsequent tile's position changing as an unintended side effect. Fix: assign `x`/`y` once at construction time and treat them as real, independent tile state from then on.
+   - *Bug this fixed:* an earlier version computed each tile's initial position from its index in the array (`getInitializedPosition(index)`). Once array reordering was introduced (the old splice-based bring-to-front), every tile's index shifted, which cascaded into every subsequent tile's position changing as an unintended side effect. Fix: assign `x`/`y` once at construction time and treat them as real, independent tile state from then on.
+   - Related rule: **never index `tiles.value` by id.** Shuffle reorders the array, so `tiles.value[id]` silently points at the wrong tile. Look tiles up with `tiles.value.find(t => t.id === id)`.
 
 5. **Resetting/shuffling tile position uses `watch` inside the child component, not a forced remount.** 
    - The parent updates `tile.x`/`tile.y` (after a Fisher-Yates shuffle of the array + randomizing coordinates); the child watches `[() => props.initialX, () => props.initialY]` and imperatively sets the composable's internal `position.value` when they change. Chosen deliberately over the "bump a key to force remount" alternative, for learning purposes (understanding `watch`'s explicit source-tracking model, in contrast to React's `useEffect`).
+   - The watch early-returns when the incoming value already equals the composable's current `x`/`y`. Without that guard, every drag frame round-trips (child emits `move` → parent writes `tile.x` → prop changes → watch writes the same value back into `position`). It converges immediately, but it's a redundant write per frame.
 
 6. **Flip (`rotateY`) and riichi-call rotation (`rotateZ`) are separate transform axes on the same element**, composed together in one `transform` string. Both coexist safely because `transform-style: preserve-3d` is set on the tile wrapper.
 
 7. **Interaction model, to avoid gesture collisions:**
-   - Single click → flip face up/down
-   - Right-click (`@contextmenu.prevent`) → rotate 90° for riichi calls (desktop)
-   - Double-click/double-tap (via a manual click-debounce, ~250ms) → same rotate action, as a touch-friendly fallback where right-click/long-press isn't reliable
-   - Pointerdown (drag start) → bring tile to front
-   - These were deliberately kept as separate, non-overlapping gestures rather than combined/overloaded, after hitting a concrete bug where naively adding both `@click` and `@dblclick` handlers caused a double-click to also fire two flips before rotating.
+   - Single click → flip face up/down (skipped if the pointer moved more than `DRAG_THRESHOLD` px since pick, so finishing a drag doesn't flip the tile)
+   - Shift+click → toggle the tile in/out of the selection (no flip)
+   - Right-click (`@contextmenu.prevent`) → rotate 90° for riichi calls
+   - Pointerdown on a tile (drag start) → bring tile to front; if it's part of a multi-tile selection, start a group drag
+   - Mousedown on empty board + drag → marquee box select; shift held at mousedown makes it additive
+   - Click on empty board (no shift) → clear selection; there's also a "Reset Selection" button
+   - **Click vs. drag disambiguation** uses `hasMoved(from, to, DRAG_THRESHOLD)` (Euclidean distance, 3px) in both the tile click handler and the marquee mouseup, so "did this move?" has one definition and one constant.
+
+8. **Child → parent position sync happens on every `move`, not on `end`.**
+   - *Why:* marquee hit-testing and group drag both read `tile.x`/`tile.y` from the parent. Before this, the parent's values were written once at mount and went stale as soon as a tile was dragged. Syncing in `onMove` (not `onEnd`) is required for group drag: the other selected tiles have to follow frame by frame, or they'd sit still and snap into place on release.
+
+9. **Selection is a `Set<number>` of tile ids in `useSelection`, owned by the board.**
+   - Selection only ever contains tiles explicitly shift+clicked or marquee-selected. A non-shift interaction with a tile that isn't part of a multi-tile selection **clears** the selection on drag-end.
+   - *Why clear, not collapse-to-this-tile (Figma-style):* `onEnd` fires for plain clicks too, so collapsing meant every flip silently selected that tile, and the next shift+click would unintentionally include it. A one-tile selection enables nothing (group drag needs `size > 1`), so nothing useful was lost.
+   - `isInGroup(id)` returns true only when the id is selected **and** `size > 1`, meaning "this tile is part of a draggable group." It is deliberately not a plain membership check; the template reads `selectedIds.value.has(id)` directly for the outline.
+
+10. **Selection decisions are made at drag-*end*, never at drag-*start*.**
+    - *Bug this fixed:* collapsing the selection in `pick` (mousedown) broke shift+click. `pick` fires on the mousedown of a shift+click, before `click`: pick collapsed the set to `{2}`, then click's toggle saw tile 2 already selected and removed it → `{}`. You couldn't select more than one tile.
+    - `end` carries the native event, so `handleOnEnd` can read `shiftKey` and skip mutating the selection when shift is held, leaving `click`'s toggle as the only writer. The rule is "only one handler mutates the selection per interaction."
+    - The clear condition is `!e.shiftKey && !isInGroup(tile.id)`, i.e. `!(has && size > 1)`. Keep it un-distributed: an earlier draft negated only the first operand (`!has && size > 1`) and missed the `{1}`-then-drag-tile-2 case (De Morgan).
+    - *Why `useDraggable`'s `onEnd` instead of a raw `@mouseup` on the tile:* an element-level `mouseup` only fires if the pointer is still over that element on release. During a fast drag the tile lags the pointer by a render tick, so releases intermittently miss it. vueuse tracks the drag with document/window-level listeners, so `onEnd` always fires.
+
+11. **Group drag moves the other tiles by an absolute delta from a fixed snapshot.**
+    - On pick of a tile in a multi-tile selection: record the dragged tile's start position (`dragStartPos`), its id (`activeDragId`), and snapshot every *other* selected tile's `x`/`y` into `groupDragOrigin: Map<id, Point>`. The group is restacked to the front, sorted by current `zIndex` first so their relative stacking order is preserved, then the dragged tile goes on top.
+    - On each `move` of the active tile: `dx/dy = position − dragStartPos`, and each other tile gets `x = origin.x + dx`. Those writes flow back down through props → the child's `watch` (decision 5): group drag reuses the exact path shuffle/order use, continuously.
+    - The dragged tile is never double-moved because it's excluded from `groupDragOrigin`; it's positioned only by its own `useDraggable`.
+    - *Bug this fixed:* an earlier version did `origin.x += dx` on every frame. `dx` is already cumulative since drag start, so the offset compounded and tiles flew off screen. The snapshot must stay fixed for the whole drag.
+    - On `end`, `activeDragId` and `groupDragOrigin` are cleared.
+
+12. **Marquee (`useMarquee`): window-level listeners, board-only start, rect hit-test.**
+    - `mousedown` is bound on `.board` but early-returns unless `event.target === boardRef.value`, so a mousedown on a tile starts a tile drag, never a marquee.
+    - `mousemove`/`mouseup` are registered with `useEventListener(window, …)` during setup. *Why window:* the pointer can leave the board mid-gesture (e.g. release over the buttons); a board-level `mouseup` would never fire and the marquee would stay stuck. Registering during setup means vueuse auto-removes them on unmount.
+    - Pointer coords are converted to board space with `clientToBoard` (`clientX − board.getBoundingClientRect().left`), matching the coordinate space of `tile.x`/`tile.y`.
+    - The box is normalized into a `Rect` via `computed` (min/max of start and current), so dragging up/left works.
+    - Hit-test: `rectsIntersect(tileToRect(tile), rect)`. Overlap is strict: rectangles whose edges only touch do **not** intersect (`!(b.left >= a.right) && !(b.right <= a.left)`, same for y), so a marquee that grazes a tile's edge doesn't select it. Tiles hidden under other tiles are selected too; that's consistent with "automate, don't judge."
+    - **Rotated tiles use their unrotated rect.** `tileToRect` ignores `rotationZ`, so grazing the long side of a riichi-rotated tile can miss or over-select slightly. Chosen as "ignore it until it bothers someone" over swapping width/height for rotated tiles.
+    - The marquee renders at `zIndex: frontMostTile + 1` with `pointer-events: none`, so it draws above every tile without intercepting events.
 
 ## Known open items / not yet implemented
 
 - **Snap-to-grid**: not natively supported by `useDraggable` (confirmed via docs — no `grid`/`snap` option exists). Plan is to implement manually via the `onEnd` callback, rounding final position to a grid — but scoped only to wall/dead-wall/hand areas (via a bounds check against those regions), leaving discards and calls freely draggable.
 - **Wall / dead-wall data model**: not yet built. Needs a real model of wall position (per-seat, ordered) and live/dead status per tile, to drive the auto-build helper.
 - **Hand zones, seat/round indicators, riichi flag+pool, swap mode**: none implemented yet — see Near-term scope above for what each should do.
-- **Mobile touch testing**: `touch-action: manipulation` was added to prevent double-tap-to-zoom from swallowing the double-tap-rotate gesture, but this hasn't been tested on an actual device yet.
+- **Touch support**: the double-click/double-tap rotate fallback and `touch-action: manipulation` described in earlier versions of this doc were never implemented. Rotation is right-click only, so it's unavailable on touch devices. Marquee and selection are mouse-event based (`mousedown`/`mousemove`/`mouseup`, `shiftKey`) and won't work on touch either.
+- **`useGroupDrag` is state-only.** The group-drag logic (`handlePick`, `handleTileMove`, `handleOnEnd`, `restackTiles`) still lives in `App.vue`. Moving it into the composable would need `tiles`, `selection`, and `bringToFront` passed in, the same way `useMarquee` receives its dependencies.

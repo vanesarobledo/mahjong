@@ -8,6 +8,20 @@ implement it yourself and check your work.
 Work through the steps in order — step 1 is a genuine prerequisite for everything
 after it, not just a nice-to-have first task.
 
+## Status (2026-11-10)
+
+Steps 1–6 are implemented on `feature/multi-select-drag-tiles`. After that, the
+code was refactored: state and logic moved out of `App.vue` into composables
+(`useSelection`, `useMarquee`, `useGroupDrag`) and pure helpers (`utils/geometry.ts`,
+`utils/tileActions.ts`, `utils/shuffle.ts`, `constants.ts`). The steps below keep
+their original reasoning, with **"As built"** notes wherever the shipped code
+differs from what the step originally described (names, file locations, or a
+changed decision). The manual verification checklist has **not** been run yet.
+
+The settled architecture is recorded in `mahjong-project-summary.md` (Source
+layout, and Key architectural decisions 7–12). That doc is the long-term
+reference; this one is the build log.
+
 ## The goal
 
 Two ways to build a multi-tile selection, and one way to move it:
@@ -87,6 +101,16 @@ parent — same reasoning as why `tiles` itself lives there, see
   `dragStartPos`) — populated when a group drag starts, cleared when it ends. See
   step 4 for what each is for.
 
+**As built:** each piece of state now lives in its own composable, still
+instantiated once in `App.vue` so the board remains the owner:
+- `selectedIds` → `useSelection()`, which also exposes `toggle`, `addId`, `reset`,
+  and `isInGroup(id)` (selected **and** `size > 1`, i.e. "part of a draggable
+  group" — not a plain membership check).
+- `marquee` → `useMarquee(boardRef, tiles, selection)`. It receives the one
+  `selection` instance as an argument instead of creating its own.
+- Group-drag bookkeeping → `useGroupDrag()`. This composable only declares the
+  three refs; the handlers that use them are still in `App.vue`.
+
 ## Step 3 — Shift+click toggles selection
 
 `TileDraggable.vue` doesn't need to know about shift or selection at all — it
@@ -98,6 +122,15 @@ through too, so the parent can branch on `event.shiftKey`:
 - shift held → toggle this tile's id in `selectedIds` (add if absent, remove if
   present) — do **not** flip.
 - shift not held → flip, exactly as today.
+
+**As built:** there's no `selected` prop. `App.vue` binds
+`:class="{ selected: selection.selectedIds.value.has(tile.id) }"` on
+`<TileDraggable>`, and Vue's attribute fallthrough puts the class on the child's
+root `.tile-wrapper` — the same element step 6 targets — so `TileDraggable` stays
+unaware of selection entirely. The click handler is `handleClick(e, tile)`; flip
+and rotate are pure helpers in `utils/tileActions.ts` (`flipTile`, `rotateTile`).
+A plain click also skips the flip when the tile moved more than `DRAG_THRESHOLD`
+since pick (see step 4's as-built note), so finishing a drag doesn't flip a tile.
 
 **Why shift is scoped to click only, never to drag-*start*:** it's tempting to also
 check `event.shiftKey` in the drag-start handler (step 4) to let shift+drag add a
@@ -137,6 +170,19 @@ ever sets up group-drag bookkeeping. It never touches `selectedIds` itself:
 - Otherwise (tile isn't selected, or is the only thing selected) → do nothing to
   `selectedIds` here. (An earlier version of this step said to collapse the
   selection right here — that was wrong; see below.)
+
+**As built** (handlers are `handlePick`, `handleTileMove`, `handleOnEnd` in
+`App.vue`):
+- `dragStartPos` is recorded on **every** pick, not only group drags, because
+  `handleClick` also uses it to tell a click from a drag
+  (`hasMoved(dragStartPos, tile, DRAG_THRESHOLD)`).
+- The group test is `selection.isInGroup(tile.id)`.
+- Before bringing the dragged tile to front, the other group tiles are restacked
+  (`restackTiles`): sorted by current `zIndex`, then each brought to front in that
+  order. That lifts the whole group above everything else while preserving the
+  group's own stacking order, and the dragged tile ends on top.
+- `bringToFront` now assigns `zIndex` from a counter instead of splicing the
+  tile to the end of the array (see `mahjong-project-summary.md`, decision 3).
 
 **Why the collapse decision moved to drag-*end*, not drag-start (this section
 originally said the opposite — recorded here because it took a real bug to find
@@ -192,6 +238,14 @@ So, in the new `onTileEnd(event, tile)` handler:
   selection — i.e. `!e.shiftKey && !(selectedIds.has(tile.id) && selectedIds.size > 1)`,
   which is exactly "this interaction wasn't a group drag" (the same `has && size > 1`
   test `onTilePick` uses) — **clear** the selection: `selectedIds.value = new Set()`.
+
+**As built:** `handleOnEnd` clears `activeDragId` and `groupDragOrigin`, but
+**not** `dragStartPos`. `click` fires *after* `end`, and `handleClick` needs
+`dragStartPos` to decide whether to flip; it resets `dragStartPos` itself when
+it detects a drag. A stale value left after a plain click is harmless because
+the next pick overwrites it. The clear condition reads
+`!e.shiftKey && !selection.isInGroup(tile.id)`, which keeps the un-distributed
+`!(H && B)` form inside `isInGroup`.
 
 **Why clear, not collapse-to-this-tile (revised after testing):** an earlier
 version of this bullet collapsed to `new Set([tile.id])`, Figma-style — whatever
@@ -313,6 +367,10 @@ variable of that name doesn't throw — it resolves to the browser global
 `window.stop()`, which aborts page loading. It'll silently "work." If you want a
 stop function, it has to be the one `useEventListener` returned to you.
 
+**As built:** all of step 5 lives in `src/composables/useMarquee.ts`, using the
+*always-on, gated* listener shape. The client → board helper is `clientToBoard`;
+it throws if the board isn't mounted.
+
 **Check yourself (5a):** with only this done, `console.log(marquee.value)` on
 mouseup (or watch it in Vue devtools) — `start` should be `{0, 0}`-ish when you
 press at the board's top-left corner, not `{0, 120}`-ish, and `current` should
@@ -337,6 +395,9 @@ Make that normalized rect a **`computed`**, and have *both* the box's `style`
 and the hit-test in 5c read from it. If the drawing and the hit-test each do
 their own min/max, it's possible for what you see and what gets selected to
 disagree — one source of truth, same principle as `selectedIds`.
+
+**As built:** the computed is `rect` (returned from `useMarquee`), and the box
+binds `zIndex: frontMostTile + 1`.
 
 **Check yourself (5b):** drag in all four diagonal directions from the same
 point; the box should always hug the cursor.
@@ -427,6 +488,19 @@ Also note, not a bug: the hit-test selects tiles hidden underneath other tiles
 too, since it only looks at rectangles, not stacking. That's consistent with the
 project's "automate, don't judge" philosophy — just don't be surprised by it.
 
+**As built:**
+- `Point`, `Rect`, `rectsIntersect`, and `tileToRect` live in
+  `src/utils/geometry.ts`, as pure functions.
+- **Edge-touch decision: strict — touching edges do not count as overlap.**
+  `rectsIntersect` uses `!(b.left >= a.right) && !(b.right <= a.left)` (same for
+  y), with a comment in the code recording the choice. A marquee that only
+  grazes a tile's edge pixel doesn't select it; the table's last row is "no".
+  (The first version used `>`/`<`, which made touching count as overlap; it was
+  changed to match the strict convention recommended above.)
+- **Rotated tiles:** *ignore it* was chosen. `tileToRect` uses the upright
+  `TILE_WIDTH × TILE_HEIGHT` box regardless of `rotationZ`. Recorded in
+  `mahjong-project-summary.md`, decision 12.
+
 ### 5d — Committing the result
 
 At mouseup, in this order:
@@ -442,6 +516,12 @@ At mouseup, in this order:
      existing `selectedIds`.
    - not additive → **replace** `selectedIds` with exactly the hits.
 3. Set `marquee.value = null`.
+
+**As built:** the threshold is `hasMoved(start, current, DRAG_THRESHOLD)`
+(`Math.hypot`, 3px), shared with the tile click handler. The order in the
+mouseup handler is slightly different but has the same effect: if not additive,
+reset the selection first; then, if the pointer didn't move, stop; otherwise
+`addId` every hit. "Reset then add" is the same as "replace."
 
 Shift matters here for a drag gesture, but because it's read once at
 marquee-start (not continuously, and not on a tile), it doesn't run into the
@@ -472,20 +552,29 @@ stable — it won't spin with the tile, which is what you want.
 Use `outline` (with `outline-offset`), not `box-shadow` — it won't interact with
 `.face`'s existing padding/inset shadow the way a box-shadow might.
 
-## Files touched
+## Files touched (as built)
 
-- **`src/components/TileDraggable.vue`** — `selected` prop, `move` emit + watch
-  guard, `end` emit, `:class="{ selected }"` + CSS.
-- **`src/App.vue`** — new state (step 2), `onTileClick`, `toggleSelect`,
-  `onTilePick`, `onTileMove`, `onTileEnd` (replaces a plain `mouseup` handler —
-  see step 4), `onBoardMouseDown`, marquee hit-test, marquee style computed,
-  template changes (new bindings, marquee `<div>`), `.marquee` CSS.
-- **`src/types.ts`** — no change (selection is a `Set` in `App.vue`, not a `Tile`
-  field).
-- **`mahjong-project-summary.md`** — once this is working, add it under
-  "Near-term scope" and document the new child→parent sync path under "Key
-  architectural decisions," since future changes need to know that path exists
-  now.
+- **`src/components/TileDraggable.vue`** — `move` emit + watch guard, `end` emit
+  (carries the native event). No `selected` prop; see step 3's as-built note.
+- **`src/App.vue`** — wires the composables together; `handleClick`,
+  `handleContextMenu`, `handlePick`, `restackTiles`, `handleTileMove`,
+  `handleOnEnd`, `bringToFront`; template bindings (`selected` class, `@move`,
+  `@end`, board `@mousedown`, marquee `<div>`); `.selected` and `.marquee` CSS.
+- **`src/composables/useSelection.ts`** — `selectedIds` + `toggle`, `addId`,
+  `reset`, `isInGroup`.
+- **`src/composables/useMarquee.ts`** — `marquee` state, `rect` computed,
+  `clientToBoard`, `handleMouseDown`, window `mousemove`/`mouseup`, hit-test +
+  commit.
+- **`src/composables/useGroupDrag.ts`** — `dragStartPos`, `activeDragId`,
+  `groupDragOrigin` refs.
+- **`src/utils/geometry.ts`** — `Point`, `Rect`, `rectsIntersect`, `hasMoved`,
+  `tileToRect`.
+- **`src/utils/tileActions.ts`**, **`src/utils/shuffle.ts`**,
+  **`src/constants.ts`** — extracted during the refactor (`DRAG_THRESHOLD` is new).
+- **`src/types.ts`** — `Tile` gained `zIndex` (from the bring-to-front fix, not
+  selection). Selection is still a `Set`, not a `Tile` field.
+- **`mahjong-project-summary.md`** — updated: Near-term scope, Source layout,
+  child→parent sync, and decisions 7–12.
 
 ## Verification checklist
 
@@ -510,6 +599,9 @@ Use `outline` (with `outline-offset`), not `box-shadow` — it won't interact wi
       step 1 keeping `x`/`y` accurate).
 
 ## Step 4 debugging log — bugs found while implementing delta propagation
+
+(Note for #1: `bringToFront` no longer splices — it assigns `zIndex` now — but
+`shuffleTiles` still reorders the array in place, so the lesson still applies.)
 
 Recorded here because each one is a specific trap worth remembering, not just a
 typo — future steps (marquee hit-testing especially) touch the same `tiles.value`
