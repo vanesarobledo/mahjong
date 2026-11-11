@@ -41,7 +41,7 @@ Seats, from the viewer's screen: **East = bottom (dealer), South = right, West =
 6. **Dora indicator:** the **top tile of dead-wall stack 3** (third stack from the break).
 7. **Reference only (future):** rinshan replacement tiles come from dead-wall stacks 1–2 (closest to the break). Kan dora indicators continue away from the break: stacks 4, 5, then 6.
 
-Source: [Wikipedia — Japanese mahjong](https://en.wikipedia.org/wiki/Japanese_mahjong) confirms 4 × 17 × 2 walls, the 7-stack dead wall, and "the upper tile from the third stack from the back end of the dead wall". The dice-counting rules (2–4) were confirmed by the project owner. riichi.wiki couldn't be fetched to cross-check.
+Source: [Wikipedia — Japanese mahjong](https://en.wikipedia.org/wiki/Japanese_mahjong) confirms 4 × 17 × 2 walls, the 7-stack dead wall, and "the upper tile from the third stack from the back end of the dead wall". The dice-counting rules (2–4) were confirmed by the project owner.
 
 ---
 
@@ -78,7 +78,7 @@ Source: [Wikipedia — Japanese mahjong](https://en.wikipedia.org/wiki/Japanese_
 ## Behaviour
 
 ### The Build Wall button
-- Lives in the toolbar next to Shuffle / Order / Reset Selection.
+- Lives in the toolbar.
 - Disabled while a build sequence is running.
 
 ### The three-beat sequence
