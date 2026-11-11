@@ -16,7 +16,7 @@ A sandbox Riichi Mahjong app where cheating is allowed.
 - [✨ Features](#-features)
 - [🧰 Tech stack](#-tech-stack)
 - [🚀 Getting started](#-getting-started)
-- [🧪 Running tests](#running-tests)
+- [🧪 Running tests](#-running-tests)
 - [📄 Project docs](#-project-docs)
 - [🙏 Credits](#-credits)
 
