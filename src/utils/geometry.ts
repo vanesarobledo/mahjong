@@ -13,8 +13,9 @@ export type Rect = {
 }
 
 export function rectsIntersect(a: Rect, b: Rect): boolean {
-    const xOverlap = !(b.left > a.right) && !(b.right < a.left);
-    const yOverlap = !(b.top > a.bottom) && !(b.bottom < a.top);
+    // Touching the edge does not count as overlap
+    const xOverlap = !(b.left >= a.right) && !(b.right <= a.left);
+    const yOverlap = !(b.top >= a.bottom) && !(b.bottom <= a.top);
 
     return xOverlap && yOverlap;
 }
