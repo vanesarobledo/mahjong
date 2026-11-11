@@ -2,7 +2,7 @@
 
 ## Design philosophy & architecture
 
-Read `mahjong-project-summary.md` before making design or architecture decisions on this project. It covers:
+Read `docs/mahjong-project-summary.md` before making design or architecture decisions on this project. It covers:
 
 - The core design philosophy (automate setup/bookkeeping, never validate or block play, cheating is a permanent feature)
 - Near-term vs. stretch scope

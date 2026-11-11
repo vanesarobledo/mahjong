@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { ref, useTemplateRef } from "vue";
-import { Tiles } from '@/data/tiles'
+import {ref, useTemplateRef} from "vue";
+import {Tiles} from '@/data/tiles'
 import TileDraggable from "@/components/TileDraggable.vue";
 import type {Tile} from "@/types.ts";
+import {hasMoved, type Point} from "@/utils/geometry.ts";
+import {DRAG_THRESHOLD, TILE_HEIGHT, TILE_PADDING, TILE_WIDTH, TILES_PER_ROW} from "@/constants.ts";
+import {flipTile, rotateTile} from "@/utils/tileActions.ts";
+import {shuffle} from "@/utils/shuffle.ts";
+import {useMarquee} from "@/composables/useMarquee.ts";
+import {useSelection} from "@/composables/useSelection.ts";
+import {useGroupDrag} from "@/composables/useGroupDrag.ts";
 
 const boardRef = useTemplateRef('board')
+
 const tiles = ref(
     Tiles.map((t, index) => {
       const pos = getInitializedPosition(index)
@@ -12,20 +20,23 @@ const tiles = ref(
         ...t,
         rotationY: 0,
         rotationZ: 0,
-        isFaceUp: false,
+        isFaceUp: true,
         x: pos.x,
         y: pos.y,
+        zIndex: index,
       }
     })
 )
 
-const TILE_WIDTH = 50, TILE_HEIGHT = 72
-const TILE_PADDING = 10
-const TILES_PER_ROW = 14
+const frontMostTile = ref(Tiles.length)
 
-function getInitializedPosition(index : number) {
-  let TILE_SPACING_X = TILE_WIDTH + (TILE_PADDING - 1)
-  let TILE_SPACING_Y = TILE_HEIGHT
+const selection = useSelection();
+const {marquee, rect, handleMouseDown} = useMarquee(boardRef, tiles, selection)
+const {dragStartPos, activeDragId, groupDragOrigin} = useGroupDrag();
+
+function getInitializedPosition(index: number) {
+  const TILE_SPACING_X = TILE_WIDTH + (TILE_PADDING - 1)
+  const TILE_SPACING_Y = TILE_HEIGHT
   const col = index % TILES_PER_ROW;
   const row = Math.floor(index / TILES_PER_ROW);
   return {
@@ -34,53 +45,133 @@ function getInitializedPosition(index : number) {
   }
 }
 
-function flipTile(tile : Tile) {
-  tile.isFaceUp = !tile.isFaceUp
-  tile.rotationY = tile.isFaceUp ? 0: 180
+function handleClick(e: MouseEvent, tile: Tile) {
+  if (e.shiftKey) {
+    selection.toggle(tile.id)
+    return
+  }
+
+  if (dragStartPos.value && hasMoved(dragStartPos.value, tile, DRAG_THRESHOLD)) {
+    dragStartPos.value = null
+    return
+  }
+
+  flipTile(tile);
 }
 
-function rotateTile(tile : Tile) {
-  tile.rotationZ = (tile.rotationZ ?? 0) === 0 ? 90 : 0;
+function handleContextMenu(tile: Tile) {
+  rotateTile(tile);
 }
 
-function bringToFront(tile : Tile) {
-  const index = tiles.value.indexOf(tile);
-  tiles.value.splice(index, 1)
-  tiles.value.push(tile)
+function handlePick(tile: Tile) {
+  dragStartPos.value = {
+    x: tile.x,
+    y: tile.y
+  }
+
+  if (selection.isInGroup(tile.id)) {
+    activeDragId.value = tile.id
+
+    let groupTiles: Tile[] = []
+
+    selection.selectedIds.value.forEach((id) => {
+      if (id === tile.id) {
+        return;
+      }
+      const currentTile = tiles.value.find((t) => t.id === id)
+      if (currentTile) {
+        groupTiles.push(currentTile)
+        groupDragOrigin.value.set(id, {
+          x: currentTile.x,
+          y: currentTile.y
+        })
+      }
+    })
+
+    restackTiles(groupTiles)
+
+  }
+  bringToFront(tile);
+}
+
+function restackTiles(group: Array<Tile>) {
+  group.sort((a, b): number => {
+    return a.zIndex - b.zIndex
+  })
+
+  group.forEach(bringToFront)
+}
+
+function handleTileMove(position: Point, tile: Tile) {
+  updateCoords(tile, position)
+
+  if (activeDragId.value === tile.id) {
+    if (!dragStartPos.value) {
+      return
+    }
+
+    const dx = position.x - dragStartPos.value.x
+    const dy = position.y - dragStartPos.value.y
+
+    groupDragOrigin.value.forEach((snapshotCoords, id) => {
+      const currentTile = tiles.value.find((t) => t.id === id)
+      if (currentTile) {
+        currentTile.x = snapshotCoords.x + dx
+        currentTile.y = snapshotCoords.y + dy
+      }
+    })
+  }
+}
+
+function handleOnEnd(e: MouseEvent, tile: Tile) {
+  activeDragId.value = null
+  groupDragOrigin.value = new Map<number, Point>()
+
+  if (!e.shiftKey && !selection.isInGroup(tile.id)) {
+    selection.reset()
+  }
+}
+
+function bringToFront(tile: Tile) {
+  tile.zIndex = frontMostTile.value
+  frontMostTile.value += 1
 }
 
 function orderTiles() {
   tiles.value.forEach(tile => {
     const pos = getInitializedPosition(tile.id)
     tile.rotationY = 0
-    tile.isFaceUp = false
+    tile.rotationZ = 0
+    tile.isFaceUp = true
     tile.x = pos.x
     tile.y = pos.y
+    tile.zIndex = tile.id
   })
+
+  frontMostTile.value = Tiles.length;
 }
 
-function resetGame() {
+function shuffleTiles() {
   const board = boardRef.value;
   const boardWidth = board ? board.clientWidth : 800;
   const boardHeight = board ? board.clientHeight : 1000;
 
-  shuffleAllTiles(tiles.value)
+  shuffle(tiles.value)
 
   tiles.value.forEach(tile => {
     tile.isFaceUp = false
     tile.rotationY = 180
     tile.x = Math.random() * (boardWidth - TILE_WIDTH)
     tile.y = Math.random() * (boardHeight - TILE_HEIGHT)
+    tile.zIndex = tile.id
   })
 
+  frontMostTile.value = Tiles.length;
 }
 
-function shuffleAllTiles(arr: Array<Tile | undefined>) {
-// Fisher-Yates Shuffle
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]]
-  }
+function updateCoords(tile: Tile, position: Point) {
+  tile.x = position.x;
+  tile.y = position.y;
 }
 
 </script>
@@ -88,10 +179,27 @@ function shuffleAllTiles(arr: Array<Tile | undefined>) {
 <template>
   <h1>Mahjong Test</h1>
 
-  <button @click="resetGame()">Shuffle Tiles</button>
-  <button @click="orderTiles()">Order Tiles</button>
+  <button @click="shuffleTiles">Shuffle Tiles</button>
+  <button @click="orderTiles">Order Tiles</button>
+  <button @click="selection.reset">Reset Selection</button>
 
-  <div ref="board" class="board">
+  <div
+      ref="board"
+      class="board"
+      @mousedown="handleMouseDown"
+  >
+    <div
+        class="marquee"
+        v-show="marquee"
+        :style="{
+          zIndex: frontMostTile + 1,
+          top: rect.top + 'px',
+          left: rect.left + 'px',
+          width: `${rect.right - rect.left}px`,
+          height: `${rect.bottom - rect.top}px`,
+        }"
+    >
+    </div>
     <TileDraggable
         v-for="tile in tiles"
         :key="tile.id"
@@ -100,16 +208,20 @@ function shuffleAllTiles(arr: Array<Tile | undefined>) {
         :initial-x="tile.x"
         :initial-y="tile.y"
         :prevent-default="true"
-        @click="flipTile(tile)"
-        @contextmenu.prevent="rotateTile(tile)"
-        @pick="bringToFront(tile)"
+        :class="{ selected: selection.selectedIds.value.has(tile.id) }"
+        :style="{ zIndex: tile.zIndex }"
+        @click="handleClick($event, tile)"
+        @contextmenu.prevent="handleContextMenu(tile)"
+        @pick="handlePick(tile)"
+        @move="(position) => handleTileMove(position, tile)"
+        @end="handleOnEnd($event, tile)"
     >
       <div
           class="tile-3d"
           :style="{ transform: `rotateY(${tile.rotationY}deg) rotateZ(${tile.rotationZ}deg)` }"
       >
         <div class="face front">
-          <img :src="tile.src" :alt="tile.name" />
+          <img :src="tile.src" :alt="tile.name"/>
         </div>
         <div class="face back"></div>
       </div>
@@ -124,11 +236,13 @@ function shuffleAllTiles(arr: Array<Tile | undefined>) {
   perspective: 800px;
   min-height: 100vh;
 }
+
 .tile {
   position: absolute;
   width: v-bind('TILE_WIDTH + `px`');
   height: v-bind('TILE_HEIGHT + `px`');
 }
+
 .tile-3d {
   position: relative;
   width: 100%;
@@ -137,6 +251,7 @@ function shuffleAllTiles(arr: Array<Tile | undefined>) {
   transition: transform 0.4s;
   cursor: pointer;
 }
+
 .face {
   position: absolute;
   inset: 0;
@@ -159,5 +274,17 @@ function shuffleAllTiles(arr: Array<Tile | undefined>) {
 .back {
   background-image: url('/img/tiles/Back.svg');
   transform: rotateY(180deg);
+}
+
+.selected {
+  outline: 3px rgb(255, 215, 0) solid;
+  outline-offset: -1px;
+  border-radius: 3px;
+}
+
+.marquee {
+  position: absolute;
+  pointer-events: none;
+  border: 2px dashed #ccc;
 }
 </style>

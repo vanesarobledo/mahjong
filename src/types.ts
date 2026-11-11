@@ -7,6 +7,7 @@ export type Tile = {
     isFaceUp: boolean;
     x: number,
     y: number,
+    zIndex: number
 };
 
 export type TileData = {
