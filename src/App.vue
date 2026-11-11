@@ -7,6 +7,7 @@ import {useEventListener} from "@vueuse/core";
 import {hasMoved, type Point, rectsIntersect, tileToRect} from "@/utils/geometry.ts";
 import {DRAG_THRESHOLD, TILE_HEIGHT, TILE_PADDING, TILE_WIDTH, TILES_PER_ROW} from "@/constants.ts";
 import {flipTile, rotateTile} from "@/utils/tileActions.ts";
+import {shuffle} from "@/utils/shuffle.ts";
 
 const boardRef = useTemplateRef('board')
 
@@ -252,15 +253,6 @@ function shuffleTiles() {
     tile.zIndex = tile.id
   })
 
-}
-
-function shuffle<T>(arr: T[]) {
-// Fisher-Yates Shuffle
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    // i and j are always in-bounds
-    [arr[i], arr[j]] = [arr[j]!, arr[i]!]
-  }
 }
 
 function resetSelection() {
