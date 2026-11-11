@@ -27,6 +27,6 @@ export function useSelection() {
         reset,
         toggle,
         addId,
-        isInSelection: isInGroup
+        isInGroup
     }
 }

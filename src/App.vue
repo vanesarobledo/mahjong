@@ -69,7 +69,7 @@ function handlePick(tile: Tile) {
     y: tile.y
   }
 
-  if (selection.isInSelection(tile.id)) {
+  if (selection.isInGroup(tile.id)) {
     activeDragId.value = tile.id
 
     let groupTiles: Tile[] = []
@@ -127,7 +127,7 @@ function handleOnEnd(e: MouseEvent, tile: Tile) {
   activeDragId.value = null
   groupDragOrigin.value = new Map<number, Point>()
 
-  if (!e.shiftKey && !selection.isInSelection(tile.id)) {
+  if (!e.shiftKey && !selection.isInGroup(tile.id)) {
     selection.reset()
   }
 }
