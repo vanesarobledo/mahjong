@@ -16,6 +16,7 @@ A sandbox Riichi Mahjong app where cheating is allowed.
 - [✨ Features](#-features)
 - [🧰 Tech stack](#-tech-stack)
 - [🚀 Getting started](#-getting-started)
+- [🧪 Running tests](#running-tests)
 - [📄 Project docs](#-project-docs)
 - [🙏 Credits](#-credits)
 
@@ -53,7 +54,7 @@ Right now, the app is a little more than a sandbox to simulate playing Mahjong, 
 | -------- | --------------------------------------------------------------------------------------- |
 | Frontend | [Vue 3](https://vuejs.org) + TypeScript, [VueUse](https://vueuse.org)                   |
 | Build    | [Vite](https://vite.dev), vue-tsc                                                       |
-| Quality  | Prettier                                                                                |
+| Quality  | Prettier, [Vitest](https://vitest.dev)                                                  |
 | Tile art | [FluffyStuff/riichi-mahjong-tiles](https://github.com/FluffyStuff/riichi-mahjong-tiles) |
 
 ## 🚀 Getting started
@@ -72,6 +73,9 @@ cd mahjong-test
 npm install
 npm run dev
 ```
+
+## 🧪 Running tests
+Run the unit tests with `npm test` (watch mode) or `npm test -- --run` (single run).
 
 ## 📄 Project docs
 
