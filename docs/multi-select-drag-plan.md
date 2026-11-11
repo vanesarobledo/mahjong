@@ -40,7 +40,7 @@ with this project's core philosophy (see `mahjong-project-summary.md`).
 ## Why step 1 has to come first
 
 Read `src/components/TileDraggable.vue`. Each tile's live drag position lives
-*only* inside its own `useDraggable()` instance (`position` ref, internal to that
+_only_ inside its own `useDraggable()` instance (`position` ref, internal to that
 composable call). The parent's `tiles[i].x`/`tiles[i].y` in `App.vue` is written
 once at mount and only ever mutated by `orderTiles()`/`resetGame()` — **manually
 dragging a tile never updates it.** Today nothing reads that stale value back, so
@@ -48,7 +48,7 @@ it's invisible. This feature reads it in two places:
 
 - **Marquee hit-testing** needs every tile's real current position to know what's
   inside the drawn box.
-- **Group drag** needs the parent to shift every *other* selected tile by the same
+- **Group drag** needs the parent to shift every _other_ selected tile by the same
   delta as the tile being actively dragged — which means mutating their `x`/`y`
   in the parent's `tiles` array, which only works if that array is accurate to
   begin with.
@@ -67,7 +67,7 @@ In `App.vue`, listen for `@move` on each `<TileDraggable>` and write it straight
 into that tile's `x`/`y` in the `tiles` array.
 
 **The trap to watch for:** `TileDraggable.vue` already has a `watch` that goes the
-*other* direction — parent prop (`initialX`/`initialY`) → child's internal
+_other_ direction — parent prop (`initialX`/`initialY`) → child's internal
 `position`. Once you add the emit-up, a drag will round-trip: child emits → parent
 writes `tile.x` → prop `initialX` changes → the existing `watch` fires → writes
 back into `position` again. That's not infinite (it converges immediately, since
@@ -103,6 +103,7 @@ parent — same reasoning as why `tiles` itself lives there, see
 
 **As built:** each piece of state now lives in its own composable, still
 instantiated once in `App.vue` so the board remains the owner:
+
 - `selectedIds` → `useSelection()`, which also exposes `toggle`, `addId`, `reset`,
   and `isInGroup(id)` (selected **and** `size > 1`, i.e. "part of a draggable
   group" — not a plain membership check).
@@ -119,6 +120,7 @@ accept a `selected: boolean` prop for styling. All decisions happen in `App.vue`
 
 Change the existing `@click="flipTile(tile)"` binding to pass the native event
 through too, so the parent can branch on `event.shiftKey`:
+
 - shift held → toggle this tile's id in `selectedIds` (add if absent, remove if
   present) — do **not** flip.
 - shift not held → flip, exactly as today.
@@ -132,19 +134,19 @@ and rotate are pure helpers in `utils/tileActions.ts` (`flipTile`, `rotateTile`)
 A plain click also skips the flip when the tile moved more than `DRAG_THRESHOLD`
 since pick (see step 4's as-built note), so finishing a drag doesn't flip a tile.
 
-**Why shift is scoped to click only, never to drag-*start*:** it's tempting to also
+**Why shift is scoped to click only, never to drag-_start_:** it's tempting to also
 check `event.shiftKey` in the drag-start handler (step 4) to let shift+drag add a
-tile to the selection *and* immediately move it. Don't — walk through what happens
+tile to the selection _and_ immediately move it. Don't — walk through what happens
 if you do: mousedown fires the drag-start handler first, click fires after (on
 mouseup). If drag-start also reacts to shift by mutating `selectedIds`, then the
 later click handler's toggle will immediately undo what drag-start just did,
 because both are reading/writing the same set in the same interaction. Keeping
 shift out of the drag-start decision entirely avoids the conflict — and it matches
-the workflow you described: build the selection with shift+click first, *then*
+the workflow you described: build the selection with shift+click first, _then_
 drag (no shift needed) to move it, as two separate steps.
 
-(This is a rule about drag-*start* specifically. Step 4 below revisits `shiftKey`
-at drag-*end*, where reading it turns out to be safe — for a different reason
+(This is a rule about drag-_start_ specifically. Step 4 below revisits `shiftKey`
+at drag-_end_, where reading it turns out to be safe — for a different reason
 than "shift shouldn't matter here." Don't over-generalize this into "never read
 shiftKey in a drag hook.")
 
@@ -159,12 +161,13 @@ pointer event, and listen for `@end` in `App.vue`.
 
 **Drag-start decision** (`onTilePick`, called from `@pick`) — this hook only
 ever sets up group-drag bookkeeping. It never touches `selectedIds` itself:
+
 - Still call `bringToFront(tile)` — unchanged.
 - If this tile is already in `selectedIds` **and** the selection has more than one
-  member → this is the start of a group drag. Snapshot the *other* selected
+  member → this is the start of a group drag. Snapshot the _other_ selected
   tiles' current `x`/`y` into `groupDragOrigin` (a `Map<id, {x, y}>` — skip the
   dragged tile itself, it manages its own position; look each other id up in
-  `tiles.value` to read *that specific tile's* `x`/`y`, not the dragged tile's).
+  `tiles.value` to read _that specific tile's_ `x`/`y`, not the dragged tile's).
   Record the dragged tile's own starting position in `dragStartPos`. Record its
   id in `activeDragId`.
 - Otherwise (tile isn't selected, or is the only thing selected) → do nothing to
@@ -173,6 +176,7 @@ ever sets up group-drag bookkeeping. It never touches `selectedIds` itself:
 
 **As built** (handlers are `handlePick`, `handleTileMove`, `handleOnEnd` in
 `App.vue`):
+
 - `dragStartPos` is recorded on **every** pick, not only group drags, because
   `handleClick` also uses it to tell a click from a drag
   (`hasMoved(dragStartPos, tile, DRAG_THRESHOLD)`).
@@ -184,41 +188,42 @@ ever sets up group-drag bookkeeping. It never touches `selectedIds` itself:
 - `bringToFront` now assigns `zIndex` from a counter instead of splicing the
   tile to the end of the array (see `mahjong-project-summary.md`, decision 3).
 
-**Why the collapse decision moved to drag-*end*, not drag-start (this section
+**Why the collapse decision moved to drag-_end_, not drag-start (this section
 originally said the opposite — recorded here because it took a real bug to find
 this):**
 
 The original version of this step said the "otherwise" branch above should
-*immediately* collapse `selectedIds` to just this tile, reasoning that `pick`
+_immediately_ collapse `selectedIds` to just this tile, reasoning that `pick`
 fires on mousedown, "even before you know whether the mousedown turns into a drag
 or a plain click" — matching Figma, where grabbing an unselected object narrows
 focus to it right away.
 
-That's true in isolation, but it breaks Step 3's premise. `pick` fires on *every*
+That's true in isolation, but it breaks Step 3's premise. `pick` fires on _every_
 mousedown, including the mousedown that starts a shift+click. Trace it by hand:
 you shift+click tile 1 (`selectedIds = {1}`). You shift+click tile 2. `pick`
 fires first, on tile 2's mousedown — tile 2 isn't in `selectedIds` yet, so the
-"otherwise" branch collapses the set to `{2}`, discarding tile 1. *Then* `click`
+"otherwise" branch collapses the set to `{2}`, discarding tile 1. _Then_ `click`
 fires and tile 2's shift-toggle runs — but tile 2 is already in the set (`pick`
 just put it there a moment ago), so the toggle reads that as "already selected"
 and removes it. Net result: `{}`. Every attempt to grow the selection past one
 tile erases what came before it, and empirically this reproduces as "shift+click
 feels inconsistent, can't select three tiles."
 
-This is the same category of trap called out just above for drag-*start* and
+This is the same category of trap called out just above for drag-_start_ and
 shift — it just wasn't obvious until this specific two-shift-clicks-in-a-row
 sequence was traced by hand and confirmed by testing. `pick` can't fix this by
 checking `event.shiftKey` either, since `pick` doesn't receive the native event,
 and giving it one just to read shift here would recreate the exact race Step 3
-already ruled out (two handlers *mutating* the same set within one interaction).
+already ruled out (two handlers _mutating_ the same set within one interaction).
 
 The fix: move the collapse to **drag-end** (`onEnd`/`@end`) instead of
 drag-start. Two reasons this specific hook works where `pick` couldn't:
+
 1. `onEnd` receives the native pointer event, so `event.shiftKey` is available
    there. Reading it here is safe for a reason specific to this hook: the new
-   `onTileEnd` handler only ever *skips* mutating `selectedIds` when shift is
+   `onTileEnd` handler only ever _skips_ mutating `selectedIds` when shift is
    held — it leaves `click`'s own toggle as the sole writer in that case. It
-   never *adds* anything the way the old drag-start version implicitly did. Two
+   never _adds_ anything the way the old drag-start version implicitly did. Two
    handlers racing to mutate the same set is the problem Step 3 flagged; one
    handler that mutates only when the other one won't isn't that problem.
 2. `onEnd` fires exactly once per interaction, regardless of how far the pointer
@@ -227,20 +232,21 @@ drag-start. Two reasons this specific hook works where `pick` couldn't:
    an unselected tile too (native `click` does **not** reliably fire after real
    pointer movement in this app — verify this yourself with a console.log before
    trusting it either way), which the checklist requires: "drag a tile that's
-   *not* in the current selection while others are selected → selection
+   _not_ in the current selection while others are selected → selection
    clears, only that tile moves."
 
 So, in the new `onTileEnd(event, tile)` handler:
+
 - Always clear `activeDragId` / `groupDragOrigin` / `dragStartPos` (this replaces
   a plain `mouseup` handler that did only this — see below for why that handler
   needs replacing, not just extending).
-- If `!event.shiftKey` and the tile is *not* already part of a `size > 1`
+- If `!event.shiftKey` and the tile is _not_ already part of a `size > 1`
   selection — i.e. `!e.shiftKey && !(selectedIds.has(tile.id) && selectedIds.size > 1)`,
   which is exactly "this interaction wasn't a group drag" (the same `has && size > 1`
   test `onTilePick` uses) — **clear** the selection: `selectedIds.value = new Set()`.
 
 **As built:** `handleOnEnd` clears `activeDragId` and `groupDragOrigin`, but
-**not** `dragStartPos`. `click` fires *after* `end`, and `handleClick` needs
+**not** `dragStartPos`. `click` fires _after_ `end`, and `handleClick` needs
 `dragStartPos` to decide whether to flip; it resets `dragStartPos` itself when
 it detects a drag. A stale value left after a plain click is harmless because
 the next pick overwrites it. The clear condition reads
@@ -250,7 +256,7 @@ the next pick overwrites it. The clear condition reads
 **Why clear, not collapse-to-this-tile (revised after testing):** an earlier
 version of this bullet collapsed to `new Set([tile.id])`, Figma-style — whatever
 you last grabbed becomes the selection. Because `onEnd` fires for plain clicks
-too, that meant *every* non-shift interaction silently selected the tile touched.
+too, that meant _every_ non-shift interaction silently selected the tile touched.
 Trace it: selection is empty, you plain-click tile 2 to flip it → `{2}`. You then
 shift+click tile 3 intending to start a fresh group → `{2, 3}`, with tile 2
 included unintentionally. Clearing instead means a selection only ever contains
@@ -261,7 +267,7 @@ enables nothing (group drag needs `size > 1`), so it wasn't worth anything here.
 
 **Negation trap in that condition** (a real bug hit while implementing it): the
 first draft wrote `!selectedIds.has(tile.id) && selectedIds.size > 1`, negating
-only the first operand. The spec's "*not* already part of a size > 1 selection"
+only the first operand. The spec's "_not_ already part of a size > 1 selection"
 negates the whole conjunction: `!(H && B)`, which by De Morgan's laws equals
 `!H || !B` — the `&&` flips to `||` when the `!` is distributed. The buggy
 version missed the `!H && !B` case (selection `{1}`, drag tile 2 → should reset,
@@ -285,6 +291,7 @@ own move/end listeners at the window level instead of on a specific element.
 
 **Delta propagation** (`onTileMove`, called from `@move`, step 1's handler,
 extended):
+
 - Always write the moving tile's own `x`/`y` from the incoming position (step 1's
   baseline behavior — happens for every tile regardless of group-drag state).
 - If the tile that moved is `activeDragId` and a `groupDragOrigin` snapshot
@@ -295,14 +302,14 @@ extended):
 **Why the dragged tile never gets double-moved:** trace it through — the delta
 loop iterates only `groupDragOrigin`'s keys, and the dragged tile was explicitly
 excluded when that map was built. The dragged tile's position is written exactly
-once per move event, straight from its own `useDraggable` instance. The *other*
+once per move event, straight from its own `useDraggable` instance. The _other_
 selected tiles are moved a completely different way: their `x`/`y` gets set on the
 parent's `tiles` array, which flows back down as `initialX`/`initialY` props, hits
 the existing `watch` in their own (untouched, not-being-dragged) `TileDraggable`
 instances, and gets pushed into their internal `position`. That's the exact same
 mechanism `orderTiles()`/`resetGame()` already use to reposition tiles — group
 drag is just puppeting several tiles through that same path, continuously instead
-of once. Nothing about a tile's *own* drag state is touched by another tile's
+of once. Nothing about a tile's _own_ drag state is touched by another tile's
 movement.
 
 ## Step 5 — Marquee: box, drag-to-select, hit-test
@@ -318,6 +325,7 @@ visible on screen before the next depends on it:
 ### 5a — Recording the gesture
 
 Wire `@mousedown` on `.board` itself:
+
 - **Guard:** only start a marquee if `event.target === boardRef.value` exactly —
   i.e. the mousedown landed on the empty board, not on a tile. (A tile's own
   mousedown bubbles up through `.board` too, since DOM events bubble — this check
@@ -330,7 +338,7 @@ Wire `@mousedown` on `.board` itself:
 - Record the start point in board-relative coordinates
   (`event.clientX/Y - boardRef.getBoundingClientRect().left/top`).
 - Record `event.shiftKey` **on the marquee state itself** (e.g. an `additive:
-  boolean` field next to `start`/`current`). 5d needs it at mouseup, and reading
+boolean` field next to `start`/`current`). 5d needs it at mouseup, and reading
   it once here — rather than off the mouseup event — is what "shift is read at
   marquee-start" means in practice.
 
@@ -345,12 +353,13 @@ drift apart.
 On `mouseup`: run 5c + 5d, then set `marquee.value = null`.
 
 **Window-level listeners — two valid shapes, pick one:**
-- *Always-on, gated:* register `useEventListener(window, 'mousemove', …)` and
+
+- _Always-on, gated:_ register `useEventListener(window, 'mousemove', …)` and
   `'mouseup'` once at setup, and have each handler `return` immediately when
   `marquee.value` is `null`. Simplest; vueuse removes them when the component
   unmounts. The cost is a no-op function call on every mouse move in the app,
   which is negligible here.
-- *Per-interaction:* call `useEventListener` inside the mousedown handler and
+- _Per-interaction:_ call `useEventListener` inside the mousedown handler and
   keep the returned stop functions, calling them in mouseup. Tighter, but note
   that vueuse only auto-cleans a listener registered during component setup
   (inside an active effect scope) — one registered from inside an event handler
@@ -368,7 +377,7 @@ variable of that name doesn't throw — it resolves to the browser global
 stop function, it has to be the one `useEventListener` returned to you.
 
 **As built:** all of step 5 lives in `src/composables/useMarquee.ts`, using the
-*always-on, gated* listener shape. The client → board helper is `clientToBoard`;
+_always-on, gated_ listener shape. The client → board helper is `clientToBoard`;
 it throws if the board isn't mounted.
 
 **Check yourself (5a):** with only this done, `console.log(marquee.value)` on
@@ -391,7 +400,7 @@ top-left. Normalize into a rectangle once:
 - `left = min(start.x, current.x)`, `right = max(start.x, current.x)`
 - same for `top`/`bottom` with `y`
 
-Make that normalized rect a **`computed`**, and have *both* the box's `style`
+Make that normalized rect a **`computed`**, and have _both_ the box's `style`
 and the hit-test in 5c read from it. If the drawing and the hit-test each do
 their own min/max, it's possible for what you see and what gets selected to
 disagree — one source of truth, same principle as `selectedIds`.
@@ -413,7 +422,7 @@ already board-relative — `useDraggable` with `containerElement` computes
 position as the element's offset from the container's `getBoundingClientRect()`
 (see `start()` in `node_modules/@vueuse/core/dist/index.js`), which is the same
 origin 5a uses for the marquee. So both rectangles are in the same space and no
-conversion is needed. This is only true *because of* step 1 — before it,
+conversion is needed. This is only true _because of_ step 1 — before it,
 `tile.x/y` was stale for any tile you'd dragged.
 
 **Derive the overlap condition in 1D first.** Two rectangles overlap exactly
@@ -421,7 +430,7 @@ when their x-ranges overlap **and** their y-ranges overlap. So the real question
 is the one-dimensional one: when do two intervals `[aStart, aEnd]` and
 `[bStart, bEnd]` on a number line overlap?
 
-It's easier to answer the opposite first. Draw two intervals that *don't*
+It's easier to answer the opposite first. Draw two intervals that _don't_
 overlap. There are only two ways that can happen — what are they, in terms of
 one interval's end and the other's start? Write that as a boolean, then negate it
 to get "they overlap." You've already met the negation trap in step 4's
@@ -429,15 +438,15 @@ to get "they overlap." You've already met the negation trap in step 4's
 flips each comparison. Distribute it carefully, then sanity-check against this
 table (intervals on the x-axis, A = marquee, B = tile):
 
-| A (marquee) | B (tile) | Overlap? | Why |
-|---|---|---|---|
-| `[0, 100]` | `[50, 100]` | yes | B starts inside A |
-| `[60, 100]` | `[50, 100]` | yes | A starts inside B — the "grabbed just the right edge of a tile" case |
-| `[0, 200]` | `[50, 100]` | yes | A fully contains B |
-| `[70, 80]` | `[50, 100]` | yes | B fully contains A — a tiny marquee drawn *inside* one tile. Easy to miss if you only reason about "does B's edge fall inside A" |
-| `[0, 40]` | `[50, 100]` | no | A ends before B starts |
-| `[110, 200]` | `[50, 100]` | no | A starts after B ends |
-| `[0, 50]` | `[50, 100]` | **you decide** | edges touch, zero-area overlap |
+| A (marquee)  | B (tile)    | Overlap?       | Why                                                                                                                              |
+| ------------ | ----------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `[0, 100]`   | `[50, 100]` | yes            | B starts inside A                                                                                                                |
+| `[60, 100]`  | `[50, 100]` | yes            | A starts inside B — the "grabbed just the right edge of a tile" case                                                             |
+| `[0, 200]`   | `[50, 100]` | yes            | A fully contains B                                                                                                               |
+| `[70, 80]`   | `[50, 100]` | yes            | B fully contains A — a tiny marquee drawn _inside_ one tile. Easy to miss if you only reason about "does B's edge fall inside A" |
+| `[0, 40]`    | `[50, 100]` | no             | A ends before B starts                                                                                                           |
+| `[110, 200]` | `[50, 100]` | no             | A starts after B ends                                                                                                            |
+| `[0, 50]`    | `[50, 100]` | **you decide** | edges touch, zero-area overlap                                                                                                   |
 
 The last row is a real choice, not a gotcha: `<` vs `<=` decides it. Strict
 (`<`) says touching isn't overlapping, which is the usual convention and means a
@@ -457,30 +466,31 @@ drawing a single marquee.
 **Collecting hits:** iterate `tiles.value` directly and collect `tile.id` for
 each hit. Iterating the array is fine here — you're reading each tile's own
 fields, never looking one up by id — so the "index isn't id" trap from the step 4
-debugging log doesn't apply. Just make sure what you *store* is `tile.id`, never
+debugging log doesn't apply. Just make sure what you _store_ is `tile.id`, never
 the loop index.
 
 **Decision you need to make: rotated tiles.** Right-click rotates `.tile-3d` by
 `rotateZ(90deg)`, but `tile.x/y` and the wrapper stay a 50×72 upright box. CSS
 rotates around the element's center by default (`transform-origin: 50% 50%`,
 [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/transform-origin)), so a
-rotated tile's *visible* footprint is 72×50, centered on the same point —
+rotated tile's _visible_ footprint is 72×50, centered on the same point —
 `(TILE_HEIGHT - TILE_WIDTH) / 2 = 11px` wider on each side and 11px shorter at
 top and bottom than the rect above. Options:
-- *Ignore it* — use the upright rect for every tile. Up to 11px of mismatch at
+
+- _Ignore it_ — use the upright rect for every tile. Up to 11px of mismatch at
   the edges of rotated tiles. Simplest; probably unnoticeable in normal use.
-- *Swap dimensions when `rotationZ === 90`* — compute the rotated footprint from
+- _Swap dimensions when `rotationZ === 90`_ — compute the rotated footprint from
   the tile's center. Exact, a few extra lines, and the tile-bounds logic now
   knows about rotation.
-- *Ask the DOM* — call `getBoundingClientRect()` on each tile element, which
-  returns the box *after* transforms
+- _Ask the DOM_ — call `getBoundingClientRect()` on each tile element, which
+  returns the box _after_ transforms
   ([CSSOM View spec](https://drafts.csswg.org/cssom-view/#dom-element-getboundingclientrect)).
   Always matches what's on screen, but needs a ref to every tile element,
   forces a layout read for all 136 tiles on each mouseup, and gives up the pure
   function.
 
-Recommendation: start with *ignore it*, test by marquee-grazing the side of a
-rotated tile, and only move to *swap dimensions* if the mismatch actually
+Recommendation: start with _ignore it_, test by marquee-grazing the side of a
+rotated tile, and only move to _swap dimensions_ if the mismatch actually
 bothers you. Whichever you pick, add it to the "Key architectural decisions" in
 `mahjong-project-summary.md` when this step lands.
 
@@ -489,6 +499,7 @@ too, since it only looks at rectangles, not stacking. That's consistent with the
 project's "automate, don't judge" philosophy — just don't be surprised by it.
 
 **As built:**
+
 - `Point`, `Rect`, `rectsIntersect`, and `tileToRect` live in
   `src/utils/geometry.ts`, as pure functions.
 - **Edge-touch decision: strict — touching edges do not count as overlap.**
@@ -497,7 +508,7 @@ project's "automate, don't judge" philosophy — just don't be surprised by it.
   grazes a tile's edge pixel doesn't select it; the table's last row is "no".
   (The first version used `>`/`<`, which made touching count as overlap; it was
   changed to match the strict convention recommended above.)
-- **Rotated tiles:** *ignore it* was chosen. `tileToRect` uses the upright
+- **Rotated tiles:** _ignore it_ was chosen. `tileToRect` uses the upright
   `TILE_WIDTH × TILE_HEIGHT` box regardless of `rotationZ`. Recorded in
   `mahjong-project-summary.md`, decision 12.
 
@@ -529,7 +540,7 @@ two-handlers-one-set conflict step 3 called out — no tile `click` handler runs
 for a marquee, since the mousedown was on the board.
 
 Open question to verify rather than assume: if you start a marquee on empty
-board and release *over a tile*, does that tile's `click` fire (and flip it)?
+board and release _over a tile_, does that tile's `click` fire (and flip it)?
 Per the UI Events spec, `click` targets the nearest common ancestor of the
 mousedown and mouseup targets — which would be `.board`, not the tile — but
 browser behavior here has historically varied. Test it in the browsers you
@@ -588,7 +599,7 @@ Use `outline` (with `outline-offset`), not `box-shadow` — it won't interact wi
 - [ ] Shift+drag a marquee over more tiles — adds to the existing selection
       instead of replacing it.
 - [ ] Click empty background with no drag — selection clears.
-- [ ] Drag a tile that's *not* in the current selection while others are selected
+- [ ] Drag a tile that's _not_ in the current selection while others are selected
       — selection clears, only that tile moves.
 - [ ] Plain-click (flip) a tile with nothing selected, then shift+click another
       tile — selection is just the shift+clicked tile; the flipped one isn't
@@ -631,9 +642,9 @@ could resurface there.
 3. **Mutating the origin snapshot instead of treating it as fixed.** Even after
    fix #2, `dx`/`dy` are calculated against `dragStartPos`, which never changes
    for the duration of one drag — meaning `dx` on every `move` event is already
-   the *total* displacement since the drag started, not the incremental change
+   the _total_ displacement since the drag started, not the incremental change
    since the last event. The buggy version applied that cumulative `dx` with
-   `pos.x += dx` onto `groupDragOrigin`'s stored value on *every* move event,
+   `pos.x += dx` onto `groupDragOrigin`'s stored value on _every_ move event,
    compounding a growing delta on top of itself each frame instead of computing a
    fresh absolute position. Symptom: grouped tiles flew far off screen, worse the
    longer the drag continued. Traced by hand-computing three consecutive move
