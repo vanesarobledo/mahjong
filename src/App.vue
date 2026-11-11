@@ -4,8 +4,9 @@ import {Tiles} from '@/data/tiles'
 import TileDraggable from "@/components/TileDraggable.vue";
 import type {Tile} from "@/types.ts";
 import {useEventListener} from "@vueuse/core";
-import {hasMoved, rectsIntersect, type Point, type Rect} from "@/utils/geometry.ts";
-import {TILE_HEIGHT, TILE_WIDTH, TILE_PADDING, TILES_PER_ROW, DRAG_THRESHOLD} from "@/constants.ts";
+import {hasMoved, type Point, rectsIntersect, tileToRect} from "@/utils/geometry.ts";
+import {DRAG_THRESHOLD, TILE_HEIGHT, TILE_PADDING, TILE_WIDTH, TILES_PER_ROW} from "@/constants.ts";
+import {flipTile, rotateTile} from "@/utils/tileActions.ts";
 
 const boardRef = useTemplateRef('board')
 
@@ -217,24 +218,6 @@ function clientToBoard(e: MouseEvent): Point {
   }
 
   throw new Error('We need a board in here, mount the board')
-}
-
-function tileToRect(tile: Tile): Rect {
-  return {
-    left: tile.x,
-    right: tile.x + TILE_WIDTH,
-    top: tile.y,
-    bottom: tile.y + TILE_HEIGHT,
-  }
-}
-
-function flipTile(tile: Tile) {
-  tile.isFaceUp = !tile.isFaceUp
-  tile.rotationY = tile.isFaceUp ? 0 : 180
-}
-
-function rotateTile(tile: Tile) {
-  tile.rotationZ = (tile.rotationZ) === 0 ? 90 : 0;
 }
 
 function bringToFront(tile: Tile) {

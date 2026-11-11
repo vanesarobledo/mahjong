@@ -1,3 +1,6 @@
+import type {Tile} from "@/types.ts";
+import {TILE_HEIGHT, TILE_WIDTH} from "@/constants.ts";
+
 export type Point = {
     x: number, y: number
 }
@@ -21,4 +24,13 @@ export function hasMoved(from: Point, to: Point, threshold: number): boolean {
     let dy = to.y - from.y;
 
     return Math.hypot(dx, dy) > threshold
+}
+
+export function tileToRect(tile: Tile): Rect {
+    return {
+        left: tile.x,
+        right: tile.x + TILE_WIDTH,
+        top: tile.y,
+        bottom: tile.y + TILE_HEIGHT,
+    }
 }
