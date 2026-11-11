@@ -50,12 +50,11 @@ type TileData = { id: number; src: string; name: string };
 
 ```
 src/
-  App.vue                     board: owns tiles, z-order counter, all cross-tile handlers
+  App.vue                     board: owns tiles, z-order counter, group-drag state, all cross-tile handlers
   components/TileDraggable.vue  one per tile; wraps useDraggable, emits pick/move/end
   composables/
     useSelection.ts           Set<id> of selected tiles + toggle/addId/reset/isInGroup
     useMarquee.ts             drag-on-empty-board box select (gesture, rect, hit-test, commit)
-    useGroupDrag.ts           group-drag bookkeeping refs (dragStartPos, activeDragId, groupDragOrigin)
   utils/
     geometry.ts               Point/Rect types, rectsIntersect, hasMoved, tileToRect
     tileActions.ts            flipTile, rotateTile (pure per-tile mutations)
@@ -67,13 +66,13 @@ src/
 
 - **Composables hold stateful, Vue-reactive concerns; `utils/` holds pure functions.** `geometry.ts` and `tileActions.ts` take plain values/objects and know nothing about refs, so they can be reasoned about (and tested) without mounting anything.
 - **Composables are wired together explicitly in `App.vue`**, not by importing each other's state. `useMarquee(boardRef, tiles, selection)` receives the selection object returned by `useSelection()` as an argument (typed via `ReturnType<typeof useSelection>`), so there's exactly one selection instance and its owner is visible at the call site.
-- `useGroupDrag` currently only _declares_ the group-drag refs; the logic that reads/writes them (`handlePick`, `handleTileMove`, `handleOnEnd`) still lives in `App.vue`, because it also needs `tiles`, `selection`, and `bringToFront`. See open items.
+- **Group drag lives entirely in `App.vue`**: its refs (`dragStartPos`, `activeDragId`, `groupDragOrigin`) and the handlers that use them (`handlePick`, `handleTileMove`, `handleOnEnd`, `restackTiles`). A `useGroupDrag` composable that only declared the refs was removed: it split the state from the only code that touched it without hiding anything. Extracting group drag again only pays off if the handlers move with the state, with `tiles`, `selection`, and `bringToFront` passed in the way `useMarquee` receives its dependencies.
 
 ## Component architecture
 
 **Two-component split**, chosen specifically to work around a vueuse limitation:
 
-- **Parent (`App.vue`, the board):** owns the `tiles` ref (array of `Tile`), owns `boardRef` (template ref to the `.board` container), owns the `frontMostTile` z-order counter, and owns all cross-tile logic — flip, rotate, bring-to-front, selection, group drag, marquee, shuffle/order.
+- **Parent (`App.vue`, the board):** owns the `tiles` ref (array of `Tile`), owns `boardRef` (template ref to the `.board` container), owns the `frontMostTile` z-order counter, owns the group-drag refs, and owns all cross-tile logic — flip, rotate, bring-to-front, selection, group drag, marquee, shuffle/order.
 - **`TileDraggable.vue` (child, one per tile):** wraps a single tile's `useDraggable()` call. Receives `initialX`/`initialY`/`containerRef` as props and emits three lifecycle events up to the parent:
   - `pick` — from `onStart` (pointerdown)
   - `move(position)` — from `onMove`, every frame of a drag
@@ -152,4 +151,3 @@ src/
 - **Wall / dead-wall auto-build**: specced in `docs/build-the-wall-spec.md` (slot model, dice break, dora flip, animated build), not yet implemented.
 - **Hand zones, seat/round indicators, riichi flag+pool, swap mode**: none implemented yet — see Near-term scope above for what each should do.
 - **Touch support**: the double-click/double-tap rotate fallback and `touch-action: manipulation` described in earlier versions of this doc were never implemented. Rotation is right-click only, so it's unavailable on touch devices. Marquee and selection are mouse-event based (`mousedown`/`mousemove`/`mouseup`, `shiftKey`) and won't work on touch either.
-- **`useGroupDrag` is state-only.** The group-drag logic (`handlePick`, `handleTileMove`, `handleOnEnd`, `restackTiles`) still lives in `App.vue`. Moving it into the composable would need `tiles`, `selection`, and `bringToFront` passed in, the same way `useMarquee` receives its dependencies.
