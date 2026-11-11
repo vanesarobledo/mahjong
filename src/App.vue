@@ -53,11 +53,9 @@ function handleClick(e: MouseEvent, tile: Tile) {
     return
   }
 
-  if (dragStartPos.value) {
-    if (hasMoved(dragStartPos.value, tile, DRAG_THRESHOLD)) {
-      dragStartPos.value = null
-      return
-    }
+  if (dragStartPos.value && hasMoved(dragStartPos.value, tile, DRAG_THRESHOLD)) {
+    dragStartPos.value = null
+    return
   }
 
   flipTile(tile);
@@ -82,7 +80,7 @@ function handlePick(tile: Tile) {
       if (id === tile.id) {
         return;
       }
-      let currentTile = tiles.value.find((t) => t.id === id)
+      const currentTile = tiles.value.find((t) => t.id === id)
       if (currentTile) {
         groupTiles.push(currentTile)
         groupDragOrigin.value.set(id, {
@@ -110,12 +108,16 @@ function handleTileMove(position: Point, tile: Tile) {
   updateCoords(tile, position)
 
   if (activeDragId.value === tile.id) {
-    groupDragOrigin.value.forEach((snapshotCoords, id) => {
-      let currentTile = tiles.value.find((t) => t.id === id)
-      if (currentTile && dragStartPos.value) {
-        let dx = position.x - dragStartPos.value.x
-        let dy = position.y - dragStartPos.value.y
+    if (!dragStartPos.value) {
+      return
+    }
 
+    const dx = position.x - dragStartPos.value.x
+    const dy = position.y - dragStartPos.value.y
+
+    groupDragOrigin.value.forEach((snapshotCoords, id) => {
+      const currentTile = tiles.value.find((t) => t.id === id)
+      if (currentTile) {
         currentTile.x = snapshotCoords.x + dx
         currentTile.y = snapshotCoords.y + dy
       }
