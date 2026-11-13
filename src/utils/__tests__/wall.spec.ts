@@ -1,5 +1,6 @@
 import {describe, expect, it} from "vitest";
-import {allSlots, type Orientation, type Seat, seatOrientation} from "@/utils/wall.ts";
+import {allSlots, type Orientation, type Seat, seatOrientation, slotPosition} from "@/utils/wall.ts";
+import type {Position} from "@vueuse/core";
 
 describe('allSlots', () => {
     it('returns all 136 slots, all unique', () => {
@@ -66,5 +67,54 @@ describe('seatOrientation', () => {
         const sOrientation = seatOrientation(seat);
 
         expect(sOrientation).toBe(expected);
+    });
+});
+
+describe('slotPosition', () => {
+    it.each<{
+        seat: Seat,
+        axis: 'x' | 'y',
+        stack1Is: 'greater' | 'less',
+    }>([
+        {
+            seat: 'East',
+            axis: 'x',
+            stack1Is: 'greater'
+        },
+        {
+            seat: 'South',
+            axis: 'y',
+            stack1Is: 'less'
+        },
+        {
+            seat: 'West',
+            axis: 'x',
+            stack1Is: 'less'
+        },
+        {
+            seat: 'North',
+            axis: 'y',
+            stack1Is: 'greater'
+        },
+    ])('returns the stack 1 is $stack1Is than stack 17 for $seat seat', ({seat, axis, stack1Is}) => {
+        const slot1 = slotPosition({ seat, stack: 1, layer: 'top' })
+        const slot17 = slotPosition({ seat, stack: 17, layer: 'top' })
+
+        const isGreater = stack1Is === 'greater';
+
+        if (isGreater) {
+            expect(slot1[axis]).toBeGreaterThan(slot17[axis]);
+        }
+        else {
+            expect(slot1[axis]).toBeLessThan(slot17[axis]);
+        }
+
+        if (axis === 'x') {
+            expect(slot1['y']).toBe(slot17['y']);
+        }
+        else {
+            expect(slot1['x']).toBe(slot17['x']);
+        }
+
     });
 });
