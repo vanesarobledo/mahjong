@@ -3,8 +3,9 @@
 import type {Point} from "@/utils/geometry.ts";
 import {TILE_HEIGHT, TILE_WIDTH} from "@/constants.ts";
 
-const seats = ["East", "South", "West", "North"] as const;
-export type Seat = (typeof seats)[number];
+const SEATS = ["East", "South", "West", "North"] as const;
+
+export type Seat = (typeof SEATS)[number];
 export type Orientation = 0 | 90 | 180 | 270;
 type Layer = 'top' | 'bottom';
 export type Slot = { seat: Seat; stack: number; layer: Layer};
@@ -14,7 +15,7 @@ const WALL_SIZE = 17;
 export function allSlots(): Slot[] {
     let wallSlots: Slot[] = []
 
-    for (const seatWind of seats) {
+    for (const seatWind of SEATS) {
         for (let i = 1; i <= (WALL_SIZE * 2); i++) {
             const isTop = i <= WALL_SIZE;
             const stackNumber= isTop ? i : i - WALL_SIZE;
