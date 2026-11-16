@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {allSlots, type Orientation, type Seat, seatOrientation, slotPosition} from "@/utils/wall.ts";
-import {TILE_WIDTH} from "@/constants.ts";
+import {STACK_OFFSET, TILE_WIDTH} from "@/constants.ts";
 
 describe('allSlots', () => {
     it('returns all 136 slots, all unique', () => {
@@ -142,5 +142,20 @@ describe('slotPosition', () => {
         const slot2 = slotPosition({ seat, stack: 2, layer: 'top' });
 
         expect(Math.abs(slot1[axis] - slot2[axis])).toBe(TILE_WIDTH);
+    });
+
+    it.each<Seat>(['East', 'South', 'West', 'North'])('returns top tile is STACK_OFFSET above bottom tile in screen space for %s wall', (seat) => {
+        const stacks = Array.from(
+            {length: 17},
+            (_, i) => 1 + i
+        );
+
+        for (const stack of stacks) {
+            const top = slotPosition({ seat, stack, layer: 'top'});
+            const bottom = slotPosition({ seat, stack, layer: 'bottom'});
+
+            expect(top.x, `stack ${stack} x`).toBe(bottom.x);
+            expect(top.y, `stack ${stack} y`).toBe(bottom.y - STACK_OFFSET);
+        }
     });
 });
