@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {allSlots, type Orientation, type Seat, seatOrientation, slotPosition} from "@/utils/wall.ts";
-import type {Position} from "@vueuse/core";
+import {TILE_WIDTH} from "@/constants.ts";
 
 describe('allSlots', () => {
     it('returns all 136 slots, all unique', () => {
@@ -97,8 +97,8 @@ describe('slotPosition', () => {
             stack1Is: 'greater'
         },
     ])('returns the stack 1 is $stack1Is than stack 17 for $seat seat', ({seat, axis, stack1Is}) => {
-        const slot1 = slotPosition({ seat, stack: 1, layer: 'top' })
-        const slot17 = slotPosition({ seat, stack: 17, layer: 'top' })
+        const slot1 = slotPosition({ seat, stack: 1, layer: 'top' });
+        const slot17 = slotPosition({ seat, stack: 17, layer: 'top' });
 
         const isGreater = stack1Is === 'greater';
 
@@ -115,6 +115,32 @@ describe('slotPosition', () => {
         else {
             expect(slot1['x']).toBe(slot17['x']);
         }
+    });
 
+    it.each<{
+        seat: Seat,
+        axis: 'x' | 'y'
+    }>([
+        {
+            seat: 'East',
+            axis: 'x'
+        },
+        {
+            seat: 'South',
+            axis: 'y'
+        },
+        {
+            seat: 'West',
+            axis: 'x'
+        },
+        {
+            seat: 'North',
+            axis: 'y'
+        },
+    ])('returns stacks TILE_WIDTH apart along the $seat wall\'s axis', ({seat, axis}) => {
+        const slot1 = slotPosition({ seat, stack: 1, layer: 'top' });
+        const slot2 = slotPosition({ seat, stack: 2, layer: 'top' });
+
+        expect(Math.abs(slot1[axis] - slot2[axis])).toBe(TILE_WIDTH);
     });
 });
