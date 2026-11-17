@@ -13,16 +13,16 @@ describe("building the wall", () => {
     it("returns all 136 slots, all unique", () => {
       const wall = allSlots();
       // Convert objects to strings to test uniqueness
-      const keys = wall.map((slot) =>  {
-        return `${slot.seat},${slot.stack},${slot.layer}`
-      })
+      const keys = wall.map((slot) => {
+        return `${slot.seat},${slot.stack},${slot.layer}`;
+      });
 
       expect(wall.length).toBe(136);
       expect(new Set(keys).size).toBe(wall.length);
     });
 
-    it.each(["East", "South", "West", "North"])(
-      "returns 2 stacks of 17 layers for %s wall",
+    it.each<Seat>(["East", "South", "West", "North"])(
+      "returns 17 stacks of 2 layers for %s wall",
       (seat: string) => {
         const wall = allSlots();
         const seatWall = wall.filter((slot) => {
@@ -34,20 +34,27 @@ describe("building the wall", () => {
         const bottomStack = seatWall.filter((slot) => {
           return slot.layer === "bottom";
         });
+        const expectedTopStack = Array.from({ length: 17 }, (_, i) => ({
+          seat,
+          stack: i + 1,
+          layer: "top",
+        }));
+        const expectedBottomStack = Array.from(
+          { length: WALL_SIZE },
+          (_, i) => ({
+            seat,
+            stack: i + 1,
+            layer: "bottom",
+          }),
+        );
 
-        expect(seatWall.length).toBe(WALL_SIZE * 2);
-        expect(topStack.length).toBe(WALL_SIZE);
-        expect(bottomStack.length).toBe(WALL_SIZE);
-
-        for (let i = 0; i < WALL_SIZE; i++) {
-          expect(topStack[i]).toEqual({ seat, stack: i + 1, layer: "top"});
-          expect(bottomStack[i]).toEqual({ seat, stack: i + 1, layer: "bottom"});
-        }
+        expect(topStack).toEqual(expectedTopStack);
+        expect(bottomStack).toEqual(expectedBottomStack);
       },
     );
   });
 
-  // TODO: Ensure these are the right orientations
+  // Assumes rotation is using CSS rotate(), where positive angle turns clockwise
   describe("seatOrientation", () => {
     it.each<{
       seat: Seat;
@@ -84,29 +91,34 @@ describe("building the wall", () => {
       seat: Seat;
       axis: "x" | "y";
       stack1Is: "greater" | "less";
+      side: string;
     }>([
       {
         seat: "East",
         axis: "x",
         stack1Is: "greater",
+        side: "right",
       },
       {
         seat: "South",
         axis: "y",
         stack1Is: "less",
+        side: "top",
       },
       {
         seat: "West",
         axis: "x",
         stack1Is: "less",
+        side: "left",
       },
       {
         seat: "North",
         axis: "y",
         stack1Is: "greater",
+        side: "bottom",
       },
     ])(
-      "returns the stack 1 is $stack1Is than stack 17 for $seat seat",
+      "returns that stack 1 is at $seat wall's right end (screen-$side)",
       ({ seat, axis, stack1Is }) => {
         const slot1 = slotPosition({ seat, stack: 1, layer: "top" });
         const slot17 = slotPosition({ seat, stack: 17, layer: "top" });
@@ -150,16 +162,14 @@ describe("building the wall", () => {
     ])(
       "returns stacks TILE_WIDTH apart along the $seat wall's axis",
       ({ seat, axis }) => {
-        const stacks = Array.from({ length: 17 }, (_, i) => 1 + i);
-        let slots= [];
-        for (const stack of stacks) {
-          slots.push(slotPosition({ seat, stack, layer: "top"}));
-        }
-        for (let stack = 1; stack < 17; stack++) {
-          const current = slotPosition({seat, stack, layer: "top"});
-          const next = slotPosition({seat, stack: stack + 1, layer: "top"});
+        for (let stack = 1; stack < WALL_SIZE; stack++) {
+          const current = slotPosition({ seat, stack, layer: "top" });
+          const next = slotPosition({ seat, stack: stack + 1, layer: "top" });
 
-          expect(Math.abs(current[axis] - next[axis]), `stacks ${stack}->${stack + 1}`).toBe(TILE_WIDTH);
+          expect(
+            Math.abs(current[axis] - next[axis]),
+            `stacks ${stack}->${stack + 1}`,
+          ).toBe(TILE_WIDTH);
         }
       },
     );
@@ -180,10 +190,9 @@ describe("building the wall", () => {
       },
     );
 
+    it.todo(
+      "no two bottom-layer footprints overlap across all four walls, including corners",
+      () => {},
+    );
   });
-
-  it.todo(
-    "no two bottom-layer footprints overlap across all four walls, including corners",
-    () => {},
-  );
 });
