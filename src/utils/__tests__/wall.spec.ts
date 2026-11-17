@@ -12,8 +12,13 @@ describe("building the wall", () => {
   describe("allSlots", () => {
     it("returns all 136 slots, all unique", () => {
       const wall = allSlots();
+      // Convert objects to strings to test uniqueness
+      const keys = wall.map((slot) =>  {
+        return `${slot.seat},${slot.stack},${slot.layer}`
+      })
+
       expect(wall.length).toBe(136);
-      expect(new Set(wall).size !== wall.length).toBe(false);
+      expect(new Set(keys).size).toBe(wall.length);
     });
 
     it.each(["East", "South", "West", "North"])(
