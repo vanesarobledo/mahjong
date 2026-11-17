@@ -4,11 +4,28 @@ import {
   type Orientation,
   type Seat,
   seatOrientation,
+  type Slot,
   slotPosition,
 } from "@/utils/wall.ts";
 import { STACK_OFFSET, TILE_WIDTH, WALL_SIZE } from "@/constants.ts";
 
 describe("building the wall", () => {
+  function wallSlots(seat: Seat): Slot[] {
+    const stackNumbers = Array.from({ length: 17 }, (_, i) => i + 1);
+    return stackNumbers.flatMap((stack) => [
+      {
+        seat,
+        stack: stack,
+        layer: "top",
+      },
+      {
+        seat,
+        stack: stack,
+        layer: "bottom",
+      },
+    ]);
+  }
+
   describe("allSlots", () => {
     it("returns all 136 slots, all unique", () => {
       const wall = allSlots();
@@ -189,6 +206,20 @@ describe("building the wall", () => {
         }
       },
     );
+
+    it("places East wall below the West wall", () => {
+      const eastY = wallSlots("East").map((slot) => slotPosition(slot).y);
+      const westY = wallSlots("West").map((slot) => slotPosition(slot).y);
+
+      expect(Math.min(...eastY)).toBeGreaterThan(Math.max(...westY));
+    });
+
+    it("places the South wall to the right of North wall", () => {
+      const southX = wallSlots("South").map((slot) => slotPosition(slot).x);
+      const northX = wallSlots("North").map((slot) => slotPosition(slot).x);
+
+      expect(Math.max(...northX)).toBeLessThan(Math.min(...southX));
+    });
 
     it.todo(
       "no two bottom-layer footprints overlap across all four walls, including corners",
