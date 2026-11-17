@@ -1,7 +1,7 @@
 // import type {Point, Rect} from "@/utils/geometry.ts";
 
 import type {Point} from "@/utils/geometry.ts";
-import {TILE_HEIGHT, TILE_WIDTH} from "@/constants.ts";
+import {STACK_OFFSET, TILE_HEIGHT, TILE_WIDTH} from "@/constants.ts";
 
 const SEATS = ["East", "South", "West", "North"] as const;
 
@@ -48,15 +48,15 @@ export function seatOrientation(seat: Seat): Orientation {
 
 export function slotPosition(slot: Slot): Point & { orientation: Orientation } {
     const tileOrientation = seatOrientation(slot.seat);
-    let slotX = TILE_WIDTH;
-    let slotY = TILE_HEIGHT;
+    const isUpright = slot.seat === 'East' || slot.seat === 'West';
+    let slotX = isUpright ? TILE_WIDTH : TILE_HEIGHT;
+    let slotY = isUpright ? TILE_HEIGHT : TILE_WIDTH;
 
     if (slot.seat === 'East') {
         slotX = ((WALL_SIZE + 1) - slot.stack) * TILE_WIDTH;
     }
 
     if (slot.seat === 'South') {
-        slotX = TILE_HEIGHT;
         slotY = slot.stack * TILE_WIDTH
     }
 
@@ -65,8 +65,11 @@ export function slotPosition(slot: Slot): Point & { orientation: Orientation } {
     }
 
     if (slot.seat === 'North') {
-        slotX = TILE_HEIGHT;
         slotY = ((WALL_SIZE + 1) - slot.stack) * TILE_WIDTH
+    }
+
+    if (slot.layer === 'top') {
+        slotY += STACK_OFFSET;
     }
 
     return {
