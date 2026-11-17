@@ -48,23 +48,25 @@ export function seatOrientation(seat: Seat): Orientation {
 
 export function slotPosition(slot: Slot): Point & { orientation: Orientation } {
     const tileOrientation = seatOrientation(slot.seat);
-    const isUpright = slot.seat === 'East' || slot.seat === 'West';
-    let slotX = isUpright ? TILE_WIDTH : TILE_HEIGHT;
-    let slotY = isUpright ? TILE_HEIGHT : TILE_WIDTH;
+    let slotX = 0, slotY = 0;
 
     if (slot.seat === 'East') {
         slotX = ((WALL_SIZE + 1) - slot.stack) * TILE_WIDTH;
+        slotY = TILE_HEIGHT;
     }
 
     if (slot.seat === 'South') {
+        slotX = TILE_HEIGHT;
         slotY = slot.stack * TILE_WIDTH
     }
 
     if (slot.seat === 'West') {
         slotX = slot.stack * TILE_WIDTH;
+        slotY = TILE_HEIGHT;
     }
 
     if (slot.seat === 'North') {
+        slotX = TILE_HEIGHT;
         slotY = ((WALL_SIZE + 1) - slot.stack) * TILE_WIDTH
     }
 
