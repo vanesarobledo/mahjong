@@ -151,10 +151,17 @@ describe("building the wall", () => {
     ])(
       "returns stacks TILE_WIDTH apart along the $seat wall's axis",
       ({ seat, axis }) => {
-        const slot1 = slotPosition({ seat, stack: 1, layer: "top" });
-        const slot2 = slotPosition({ seat, stack: 2, layer: "top" });
+        const stacks = Array.from({ length: 17 }, (_, i) => 1 + i);
+        let slots= [];
+        for (const stack of stacks) {
+          slots.push(slotPosition({ seat, stack, layer: "top"}));
+        }
+        for (let stack = 1; stack < 17; stack++) {
+          const current = slotPosition({seat, stack, layer: "top"});
+          const next = slotPosition({seat, stack: stack + 1, layer: "top"});
 
-        expect(Math.abs(slot1[axis] - slot2[axis])).toBe(TILE_WIDTH);
+          expect(Math.abs(current[axis] - next[axis]), `stacks ${stack}->${stack + 1}`).toBe(TILE_WIDTH);
+        }
       },
     );
 
@@ -173,6 +180,7 @@ describe("building the wall", () => {
         }
       },
     );
+
   });
 
   it.todo(
