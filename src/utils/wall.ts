@@ -8,7 +8,7 @@ const SEATS = ["East", "South", "West", "North"] as const;
 export type Seat = (typeof SEATS)[number];
 export type Orientation = 0 | 90 | 180 | 270;
 type Layer = 'top' | 'bottom';
-export type Slot = { seat: Seat; stack: number; layer: Layer};
+export type Slot = { seat: Seat; stack: number; layer: Layer };
 
 const WALL_SIZE = 17;
 
@@ -18,8 +18,8 @@ export function allSlots(): Slot[] {
     for (const seatWind of SEATS) {
         for (let i = 1; i <= (WALL_SIZE * 2); i++) {
             const isTop = i <= WALL_SIZE;
-            const stackNumber= isTop ? i : i - WALL_SIZE;
-            const stackLayer: Layer = isTop ? 'top': 'bottom';
+            const stackNumber = isTop ? i : i - WALL_SIZE;
+            const stackLayer: Layer = isTop ? 'top' : 'bottom';
 
             wallSlots.push({
                 seat: seatWind,
@@ -32,7 +32,7 @@ export function allSlots(): Slot[] {
 }
 
 export function seatOrientation(seat: Seat): Orientation {
-    switch(seat) {
+    switch (seat) {
         case 'East':
             return 0;
         case 'South':
@@ -48,43 +48,31 @@ export function seatOrientation(seat: Seat): Orientation {
 
 export function slotPosition(slot: Slot): Point & { orientation: Orientation } {
     const tileOrientation = seatOrientation(slot.seat);
+    let slotX = TILE_WIDTH;
+    let slotY = TILE_HEIGHT;
 
     if (slot.seat === 'East') {
-        return {
-            x: ((WALL_SIZE + 1) - slot.stack) * TILE_WIDTH,
-            y: TILE_HEIGHT,
-            orientation: tileOrientation
-        }
+        slotX = ((WALL_SIZE + 1) - slot.stack) * TILE_WIDTH;
     }
 
     if (slot.seat === 'South') {
-        return {
-            x: TILE_HEIGHT,
-            y: slot.stack * TILE_WIDTH,
-            orientation: tileOrientation
-        }
+        slotX = TILE_HEIGHT;
+        slotY = slot.stack * TILE_WIDTH
     }
 
     if (slot.seat === 'West') {
-        return {
-            x: slot.stack * TILE_WIDTH,
-            y: TILE_HEIGHT,
-            orientation: tileOrientation
-        }
+        slotX = slot.stack * TILE_WIDTH;
     }
 
     if (slot.seat === 'North') {
-        return {
-            x: TILE_HEIGHT,
-            y: ((WALL_SIZE + 1) - slot.stack)  * TILE_WIDTH,
-            orientation: tileOrientation
-        }
+        slotX = TILE_HEIGHT;
+        slotY = ((WALL_SIZE + 1) - slot.stack) * TILE_WIDTH
     }
 
     return {
-        x: 0,
-        y: 0,
-        orientation: 0
+        x: slotX,
+        y: slotY,
+        orientation: tileOrientation
     }
 }
 
