@@ -6,7 +6,7 @@ import {
   seatOrientation,
   slotPosition,
 } from "@/utils/wall.ts";
-import { STACK_OFFSET, TILE_WIDTH } from "@/constants.ts";
+import { STACK_OFFSET, TILE_WIDTH, WALL_SIZE } from "@/constants.ts";
 
 describe("building the wall", () => {
   describe("allSlots", () => {
@@ -22,28 +22,27 @@ describe("building the wall", () => {
     });
 
     it.each(["East", "South", "West", "North"])(
-      "returns 2 stacks of 17 layers in each seat",
+      "returns 2 stacks of 17 layers for %s wall",
       (seat: string) => {
         const wall = allSlots();
-        const stackRange = Array.from({ length: 17 }, (_, i) => 1 + i);
         const seatWall = wall.filter((slot) => {
-          if (slot.seat === seat) return slot;
+          return slot.seat === seat;
         });
         const topStack = seatWall.filter((slot) => {
-          if (slot.layer === "top") return slot;
+          return slot.layer === "top";
         });
         const bottomStack = seatWall.filter((slot) => {
-          if (slot.layer === "bottom") return slot;
+          return slot.layer === "bottom";
         });
 
-        const stackNumbers = seatWall.map((s) => s.stack).sort();
+        expect(seatWall.length).toBe(WALL_SIZE * 2);
+        expect(topStack.length).toBe(WALL_SIZE);
+        expect(bottomStack.length).toBe(WALL_SIZE);
 
-        expect(seatWall.length).toBe(34);
-        expect(topStack.length).toBe(17);
-        expect(bottomStack.length).toBe(17);
-        expect(new Set(stackNumbers).size === stackRange.length).toBe(true);
-        expect(Math.min(...stackNumbers)).toBe(1);
-        expect(Math.max(...stackNumbers)).toBe(17);
+        for (let i = 0; i < WALL_SIZE; i++) {
+          expect(topStack[i]).toEqual({ seat, stack: i + 1, layer: "top"});
+          expect(bottomStack[i]).toEqual({ seat, stack: i + 1, layer: "bottom"});
+        }
       },
     );
   });

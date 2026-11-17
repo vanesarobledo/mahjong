@@ -1,7 +1,12 @@
 // import type {Point, Rect} from "@/utils/geometry.ts";
 
 import type { Point } from "@/utils/geometry.ts";
-import { STACK_OFFSET, TILE_HEIGHT, TILE_WIDTH } from "@/constants.ts";
+import {
+  STACK_OFFSET,
+  TILE_HEIGHT,
+  TILE_WIDTH,
+  WALL_SIZE,
+} from "@/constants.ts";
 
 const SEATS = ["East", "South", "West", "North"] as const;
 
@@ -9,8 +14,6 @@ export type Seat = (typeof SEATS)[number];
 export type Orientation = 0 | 90 | 180 | 270;
 type Layer = "top" | "bottom";
 export type Slot = { seat: Seat; stack: number; layer: Layer };
-
-const WALL_SIZE = 17;
 
 export function allSlots(): Slot[] {
   let wallSlots: Slot[] = [];

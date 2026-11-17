@@ -1,3 +1,4 @@
+export const WALL_SIZE = 17;
 export const TILE_WIDTH = 50,
   TILE_HEIGHT = 72;
 export const TILE_PADDING = 10;
