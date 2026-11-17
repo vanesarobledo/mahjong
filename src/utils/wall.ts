@@ -71,7 +71,7 @@ export function slotPosition(slot: Slot): Point & { orientation: Orientation } {
     slotY = (WALL_SIZE + 1 - slot.stack) * TILE_WIDTH;
   }
 
-  if (slot.layer === "top") {
+  if (slot.layer === "bottom") {
     slotY += STACK_OFFSET;
   }
 

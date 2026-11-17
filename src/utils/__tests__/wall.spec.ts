@@ -163,7 +163,7 @@ describe("building the wall", () => {
           const bottom = slotPosition({ seat, stack, layer: "bottom" });
 
           expect(top.x, `stack ${stack} x`).toBe(bottom.x);
-          expect(top.y - STACK_OFFSET, `stack ${stack} y`).toBe(bottom.y);
+          expect(top.y, `stack ${stack} y`).toBe(bottom.y - STACK_OFFSET);
           expect(top.orientation).toBe(bottom.orientation);
         }
       },
