@@ -1,36 +1,37 @@
-import {describe, expect, it} from "vitest";
-import {allSlots, type Orientation, type Seat, seatOrientation, slotPosition} from "@/utils/wall.ts";
-import {STACK_OFFSET, TILE_WIDTH} from "@/constants.ts";
+import { describe, expect, it } from "vitest";
+import {
+  allSlots,
+  type Orientation,
+  type Seat,
+  seatOrientation,
+  slotPosition,
+} from "@/utils/wall.ts";
+import { STACK_OFFSET, TILE_WIDTH } from "@/constants.ts";
 
-describe('allSlots', () => {
-    it('returns all 136 slots, all unique', () => {
-        const wall = allSlots();
-        expect(wall.length).toBe(136);
-        expect(new Set(wall).size !== wall.length).toBe(false);
+describe("building the wall", () => {
+  describe("allSlots", () => {
+    it("returns all 136 slots, all unique", () => {
+      const wall = allSlots();
+      expect(wall.length).toBe(136);
+      expect(new Set(wall).size !== wall.length).toBe(false);
     });
 
-    it.each([
-        'East',
-        'South',
-        'West',
-        'North'
-    ])('returns 2 stacks of 17 layers in each seat', (seat: string) => {
+    it.each(["East", "South", "West", "North"])(
+      "returns 2 stacks of 17 layers in each seat",
+      (seat: string) => {
         const wall = allSlots();
-        const stackRange = Array.from(
-            {length: 17},
-            (_, i) => 1 + i
-        );
+        const stackRange = Array.from({ length: 17 }, (_, i) => 1 + i);
         const seatWall = wall.filter((slot) => {
-            if (slot.seat === seat) return slot;
+          if (slot.seat === seat) return slot;
         });
         const topStack = seatWall.filter((slot) => {
-            if (slot.layer === 'top') return slot;
+          if (slot.layer === "top") return slot;
         });
         const bottomStack = seatWall.filter((slot) => {
-            if (slot.layer === 'bottom') return slot;
+          if (slot.layer === "bottom") return slot;
         });
 
-        const stackNumbers = seatWall.map(s => s.stack).sort();
+        const stackNumbers = seatWall.map((s) => s.stack).sort();
 
         expect(seatWall.length).toBe(34);
         expect(topStack.length).toBe(17);
@@ -38,125 +39,139 @@ describe('allSlots', () => {
         expect(new Set(stackNumbers).size === stackRange.length).toBe(true);
         expect(Math.min(...stackNumbers)).toBe(1);
         expect(Math.max(...stackNumbers)).toBe(17);
-    });
-});
+      },
+    );
+  });
 
-// TODO: Ensure these are the right orientations
-describe('seatOrientation', () => {
+  // TODO: Ensure these are the right orientations
+  describe("seatOrientation", () => {
     it.each<{
-        seat: Seat;
-        expected: Orientation
+      seat: Seat;
+      expected: Orientation;
     }>([
-        {
-            seat: 'East',
-            expected: 0
-        },
-        {
-            seat: 'South',
-            expected: 270
-        },
-        {
-            seat: 'West',
-            expected: 180
-        },
-        {
-            seat: 'North',
-            expected: 90
-        },
-    ])('returns orientation $orientation for the $expected seat', ({seat, expected}) => {
+      {
+        seat: "East",
+        expected: 0,
+      },
+      {
+        seat: "South",
+        expected: 270,
+      },
+      {
+        seat: "West",
+        expected: 180,
+      },
+      {
+        seat: "North",
+        expected: 90,
+      },
+    ])(
+      "returns orientation $orientation for the $expected seat",
+      ({ seat, expected }) => {
         const sOrientation = seatOrientation(seat);
 
         expect(sOrientation).toBe(expected);
-    });
-});
+      },
+    );
+  });
 
-describe('slotPosition', () => {
+  describe("slotPosition", () => {
     it.each<{
-        seat: Seat,
-        axis: 'x' | 'y',
-        stack1Is: 'greater' | 'less',
+      seat: Seat;
+      axis: "x" | "y";
+      stack1Is: "greater" | "less";
     }>([
-        {
-            seat: 'East',
-            axis: 'x',
-            stack1Is: 'greater'
-        },
-        {
-            seat: 'South',
-            axis: 'y',
-            stack1Is: 'less'
-        },
-        {
-            seat: 'West',
-            axis: 'x',
-            stack1Is: 'less'
-        },
-        {
-            seat: 'North',
-            axis: 'y',
-            stack1Is: 'greater'
-        },
-    ])('returns the stack 1 is $stack1Is than stack 17 for $seat seat', ({seat, axis, stack1Is}) => {
-        const slot1 = slotPosition({ seat, stack: 1, layer: 'top' });
-        const slot17 = slotPosition({ seat, stack: 17, layer: 'top' });
+      {
+        seat: "East",
+        axis: "x",
+        stack1Is: "greater",
+      },
+      {
+        seat: "South",
+        axis: "y",
+        stack1Is: "less",
+      },
+      {
+        seat: "West",
+        axis: "x",
+        stack1Is: "less",
+      },
+      {
+        seat: "North",
+        axis: "y",
+        stack1Is: "greater",
+      },
+    ])(
+      "returns the stack 1 is $stack1Is than stack 17 for $seat seat",
+      ({ seat, axis, stack1Is }) => {
+        const slot1 = slotPosition({ seat, stack: 1, layer: "top" });
+        const slot17 = slotPosition({ seat, stack: 17, layer: "top" });
 
-        const isGreater = stack1Is === 'greater';
+        const isGreater = stack1Is === "greater";
 
         if (isGreater) {
-            expect(slot1[axis]).toBeGreaterThan(slot17[axis]);
-        }
-        else {
-            expect(slot1[axis]).toBeLessThan(slot17[axis]);
+          expect(slot1[axis]).toBeGreaterThan(slot17[axis]);
+        } else {
+          expect(slot1[axis]).toBeLessThan(slot17[axis]);
         }
 
-        if (axis === 'x') {
-            expect(slot1['y']).toBe(slot17['y']);
+        if (axis === "x") {
+          expect(slot1["y"]).toBe(slot17["y"]);
+        } else {
+          expect(slot1["x"]).toBe(slot17["x"]);
         }
-        else {
-            expect(slot1['x']).toBe(slot17['x']);
-        }
-    });
+      },
+    );
 
     it.each<{
-        seat: Seat,
-        axis: 'x' | 'y'
+      seat: Seat;
+      axis: "x" | "y";
     }>([
-        {
-            seat: 'East',
-            axis: 'x'
-        },
-        {
-            seat: 'South',
-            axis: 'y'
-        },
-        {
-            seat: 'West',
-            axis: 'x'
-        },
-        {
-            seat: 'North',
-            axis: 'y'
-        },
-    ])('returns stacks TILE_WIDTH apart along the $seat wall\'s axis', ({seat, axis}) => {
-        const slot1 = slotPosition({ seat, stack: 1, layer: 'top' });
-        const slot2 = slotPosition({ seat, stack: 2, layer: 'top' });
+      {
+        seat: "East",
+        axis: "x",
+      },
+      {
+        seat: "South",
+        axis: "y",
+      },
+      {
+        seat: "West",
+        axis: "x",
+      },
+      {
+        seat: "North",
+        axis: "y",
+      },
+    ])(
+      "returns stacks TILE_WIDTH apart along the $seat wall's axis",
+      ({ seat, axis }) => {
+        const slot1 = slotPosition({ seat, stack: 1, layer: "top" });
+        const slot2 = slotPosition({ seat, stack: 2, layer: "top" });
 
         expect(Math.abs(slot1[axis] - slot2[axis])).toBe(TILE_WIDTH);
-    });
+      },
+    );
 
-    it.each<Seat>(['East', 'South', 'West', 'North'])('returns top tile is STACK_OFFSET above bottom tile in screen space for %s wall', (seat) => {
-        const stacks = Array.from(
-            {length: 17},
-            (_, i) => 1 + i
-        );
+    it.each<Seat>(["East", "South", "West", "North"])(
+      "returns top tile is STACK_OFFSET above bottom tile in screen space for %s wall",
+      (seat) => {
+        const stacks = Array.from({ length: 17 }, (_, i) => 1 + i);
 
         for (const stack of stacks) {
-            const top = slotPosition({ seat, stack, layer: 'top'});
-            const bottom = slotPosition({ seat, stack, layer: 'bottom'});
+          const top = slotPosition({ seat, stack, layer: "top" });
+          const bottom = slotPosition({ seat, stack, layer: "bottom" });
 
-            expect(top.x, `stack ${stack} x`).toBe(bottom.x);
-            expect(top.y  - STACK_OFFSET, `stack ${stack} y`).toBe(bottom.y);
-            expect(top.orientation).toBe(bottom.orientation);
+          expect(top.x, `stack ${stack} x`).toBe(bottom.x);
+          expect(top.y - STACK_OFFSET, `stack ${stack} y`).toBe(bottom.y);
+          expect(top.orientation).toBe(bottom.orientation);
         }
-    });
+      },
+    );
+  });
+
+  it.todo(
+    "no two bottom-layer footprints overlap across all four walls, including corners",
+    () => {},
+  );
 });
