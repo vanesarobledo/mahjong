@@ -1,7 +1,8 @@
 // import type {Point, Rect} from "@/utils/geometry.ts";
 
-import type { Point } from "@/utils/geometry.ts";
+import type { Point, Rect } from "@/utils/geometry.ts";
 import {
+  CORNER_GAP,
   STACK_OFFSET,
   TILE_HEIGHT,
   TILE_WIDTH,
@@ -49,33 +50,43 @@ export function seatOrientation(seat: Seat): Orientation {
   }
 }
 
+
+// TODO: Adjust x/y based on offset when rotated for South & North
 export function slotPosition(slot: Slot): Point & { orientation: Orientation } {
+  const WALL_LENGTH = WALL_SIZE * TILE_WIDTH;
+  const SIDE_TILE_OFFSET = (TILE_HEIGHT - TILE_WIDTH) / 2;
   const tileOrientation = seatOrientation(slot.seat);
+
   let slotX = 0,
     slotY = 0;
 
   if (slot.seat === "East") {
-    slotX = (WALL_SIZE + 1 - slot.stack) * TILE_WIDTH;
-    slotY = TILE_HEIGHT;
+    slotX = ((WALL_SIZE - slot.stack) * TILE_WIDTH) + CORNER_GAP;
+    slotY = (2 * CORNER_GAP) + WALL_LENGTH - TILE_HEIGHT;
   }
 
   if (slot.seat === "South") {
-    slotX = TILE_HEIGHT;
-    slotY = slot.stack * TILE_WIDTH;
+    slotX = (2 * CORNER_GAP) + WALL_LENGTH - TILE_HEIGHT;
+    slotY = CORNER_GAP + (slot.stack * TILE_WIDTH);
   }
 
   if (slot.seat === "West") {
-    slotX = slot.stack * TILE_WIDTH;
-    slotY = TILE_HEIGHT;
+    slotX = CORNER_GAP + (slot.stack * TILE_WIDTH);
+    slotY = 0;
   }
 
   if (slot.seat === "North") {
-    slotX = TILE_HEIGHT;
-    slotY = (WALL_SIZE + 1 - slot.stack) * TILE_WIDTH;
+    slotX = 0;
+    slotY = CORNER_GAP + (WALL_SIZE - slot.stack) * TILE_WIDTH;
   }
 
   if (slot.layer === "bottom") {
     slotY += STACK_OFFSET;
+  }
+
+  if (slot.seat === "South" || slot.seat === "North") {
+    slotX += SIDE_TILE_OFFSET
+    slotY -= SIDE_TILE_OFFSET;
   }
 
   return {
@@ -85,6 +96,11 @@ export function slotPosition(slot: Slot): Point & { orientation: Orientation } {
   };
 }
 
-// export function orientedRect(pos: Point, orientation: Orientation): Rect {
-//
-// }
+export function orientedRect(pos: Point, orientation: Orientation): Rect {
+  return {
+    top: 0,
+    left: 0,
+    bottom: 0,
+    right: 0
+  }
+}
