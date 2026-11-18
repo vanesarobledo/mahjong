@@ -127,15 +127,26 @@ describe("break", () => {
         const deadWall = deadWallStacks({ total, seat: "West" });
         const nextWallWrap = deadWall.filter((s) => {
           return s.seat === "North";
-        })
+        });
 
         expect(nextWallWrap.length).toBe(4);
         expect(deadWall.find((s) => s.stack === total)?.seat).toBe("West");
         expect(deadWall.find((s) => s.stack === 17)?.seat).toBe("North");
       });
-      it.todo(
-        "takes most of its stacks from the next wall at the lowest total (2)",
-      );
+
+      it("takes most of its stacks from the next wall at the lowest total (2)", () => {
+        const total = 2;
+        const seat: Seat = "South";
+        const deadWall = deadWallStacks({ total, seat });
+        const sameWall = deadWall.filter((s) => {
+          return s.seat === seat;
+        });
+        const nextWallWrap = deadWall.filter((s) => {
+          return s.seat === "West";
+        });
+
+        expect(nextWallWrap.length).toBeGreaterThan(sameWall.length);
+      });
     });
   });
 });
