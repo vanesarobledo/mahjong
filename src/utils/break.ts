@@ -1,7 +1,7 @@
 // import type { Slot } from "vue";
 import type { Seat } from "@/utils/wall.ts";
 
-export type Break = { total: number; seat: Seat; stack: number }
+export type Break = { total: number; seat: Seat; }
 
 const breakSouth = [2, 6, 10];
 const breakWest = [3, 7, 11];
@@ -27,8 +27,7 @@ export function computeBreak(die1: number, die2: number): Break {
 
   return {
     total,
-    seat,
-    stack: 1
+    seat
   }
 }
 

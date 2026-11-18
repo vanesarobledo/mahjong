@@ -92,10 +92,32 @@ describe("break", () => {
         return `${slot.seat},${slot.stack}`;
       });
 
-      console.log(deadWall);
-
       expect(deadWall.length).toEqual(7);
       expect(new Set(keys).size).toEqual(deadWall.length);
+    });
+
+    describe("when the dead wall fits on the dice wall", () => {
+      it("stops at stack 2 when the total is 8, leaving stack 1 live", () => {
+        const total = 8;
+        const deadWall = deadWallStacks({ total, seat: "North" });
+        const deadWallStackNumbers = deadWall.map((s) => {
+          return s.stack;
+        });
+
+        expect(Math.min(...deadWallStackNumbers)).toBe(2);
+        expect(Math.max(...deadWallStackNumbers)).toBe(total);
+        expect(deadWallStackNumbers.includes(1)).toBe(false);
+      });
+      it.todo("stays on one wall at the highest total (12)");
+    });
+
+    describe("when the dead wall wraps into the next wall", () => {
+      it.todo(
+        "continues from the next wall's stack 17 after running out of stacks (total 3)",
+      );
+      it.todo(
+        "takes most of its stacks from the next wall at the lowest total (2)",
+      );
     });
   });
 });
