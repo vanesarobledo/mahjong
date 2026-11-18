@@ -9,10 +9,9 @@ const breakWest = [3, 7, 11];
 const breakNorth = [4, 8, 12];
 
 export function computeBreak(die1: number, die2: number): Break {
-  // // Add a test for this guard if you implement it
-  // if (die1 > 6 || die2 < 6) {
-  //   throw new Error('You should only be rolling d6s');
-  // }
+  if (Math.max(die1, die2) > 6 || Math.min(die1, die2) <= 0) {
+    throw new Error('Dice rolled must be 1d6; only inputs 1-6 are allowed');
+  }
 
   const total = die1 + die2;
   let seat: Seat = 'East';

@@ -82,6 +82,21 @@ describe("break", () => {
       expect(wallBreak.total).toBe(total);
       expect(wallBreak.seat).toBe(seat);
     });
+
+    it.each<{ die1: number; die2: number }>([
+      {
+        die1: -1,
+        die2: 1,
+      },
+      {
+        die1: 1,
+        die2: 8,
+      },
+    ])("throws an error when dice inputs are out of range", ({ die1, die2 }) => {
+      expect(() => {
+        computeBreak(die1, die2);
+      }).toThrow("Dice rolled must be 1d6; only inputs 1-6 are allowed");
+    });
   });
 
   describe("deadWallStacks", () => {
