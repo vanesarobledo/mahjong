@@ -16,17 +16,19 @@ import { shuffle } from "@/utils/shuffle.ts";
 import { useMarquee } from "@/composables/useMarquee.ts";
 import { useSelection } from "@/composables/useSelection.ts";
 import { allSlots, slotPosition } from "@/utils/wall.ts";
+import { computeBreak } from "@/utils/break.ts";
 
 const boardRef = useTemplateRef("board");
 
 const tiles = ref(
-  Tiles.map((t, index) => {
+  Tiles.map((t, index) : Tile => {
     const pos = getInitializedPosition(index);
     return {
       ...t,
       rotationY: 0,
       rotationZ: 0,
       isFaceUp: true,
+      orientation: 0,
       x: pos.x,
       y: pos.y,
       zIndex: index,
@@ -156,6 +158,7 @@ function orderTiles() {
     const pos = getInitializedPosition(tile.id);
     tile.rotationY = 0;
     tile.rotationZ = 0;
+    tile.orientation = 0;
     tile.isFaceUp = true;
     tile.x = pos.x;
     tile.y = pos.y;
@@ -175,6 +178,7 @@ function shuffleTiles() {
   tiles.value.forEach((tile) => {
     tile.isFaceUp = false;
     tile.rotationY = 180;
+    tile.orientation = 0;
     tile.x = Math.random() * (boardWidth - TILE_WIDTH);
     tile.y = Math.random() * (boardHeight - TILE_HEIGHT);
     tile.zIndex = tile.id;
@@ -192,13 +196,20 @@ const wall = allSlots();
 const buildTheWallDryRun = () => {
   shuffle(tiles.value);
 
+  const die1 = Math.floor(Math.random() * 6);
+  const die2 = Math.floor(Math.random() * 6);
+
+  const brk = computeBreak(die1, die2);
+
+  console.log(brk);
+
   const positions = wall.map((slot) => {
-    return slotPosition(slot);
+    return slotPosition(slot, brk);
   });
 
   tiles.value.forEach((tile, index) => {
     tile.rotationY = 180;
-    tile.rotationZ = positions[index].orientation;
+    tile.orientation = positions[index].orientation;
     tile.x = positions[index].x;
     tile.y = positions[index].y;
   });
@@ -244,7 +255,7 @@ const buildTheWallDryRun = () => {
       <div
         class="tile-3d"
         :style="{
-          transform: `rotateY(${tile.rotationY}deg) rotateZ(${tile.rotationZ}deg)`,
+          transform: `rotateZ(${tile.orientation}deg) rotateY(${tile.rotationY}deg) rotateZ(${tile.rotationZ}deg)`,
         }"
       >
         <div class="face front">

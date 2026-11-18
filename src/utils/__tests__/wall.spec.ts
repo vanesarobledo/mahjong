@@ -51,6 +51,7 @@ describe("building the wall", () => {
     name: "",
     rotationY: 0,
     rotationZ: 0,
+    orientation: 0,
     isFaceUp: false,
     x: 0,
     y: 0,
