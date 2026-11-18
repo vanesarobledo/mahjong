@@ -257,12 +257,9 @@ describe("building the wall", () => {
 
         expect(bottomWall.length).toBe(wall.length / 2);
 
-        for (let i = 0; i < bottomWall.length; i++) {
-          for (let j = i + 1; j < bottomWall.length; j++) {
-            expect(
-              rectsIntersect(bottomWall[i].rect, bottomWall[j].rect),
-              `${bottomWall[i].label} vs ${bottomWall[j].label}`,
-            ).toBe(false);
+        for (const [i, a] of bottomWall.entries()) {
+          for (const b of bottomWall.slice(i + 1)) {
+            expect(rectsIntersect(a.rect, b.rect), `${a.label} vs ${b.label}`).toBe(false);
           }
         }
       },
