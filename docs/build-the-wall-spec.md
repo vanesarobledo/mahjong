@@ -59,7 +59,6 @@ Source: [Wikipedia — Japanese mahjong](https://en.wikipedia.org/wiki/Japanese_
 6. **Fixed table size derived from constants**, centered horizontally on the board, page scrolls on small screens. Geometry functions return positions relative to the table origin; the composable adds the origin (which depends on board width at runtime). Leave margin around the square for future hand zones; hand zones are not designed here.
 7. **Randomness stays at the edge.** Pure functions take dice values (and an already-shuffled id order) as arguments. Only the composable calls `Math.random`.
 8. **Code layout:** pure functions in `src/utils/wall.ts`; a `useWall(...)` composable owns dice state, the build sequence, and `buildWall()`. Dependencies (`tiles`, `frontMostTile`, `selection`, `boardRef`) are passed in explicitly, the way `useMarquee` receives its dependencies.
-   - _Why not leave orchestration in `App.vue`:_ `useGroupDrag` stayed state-only and left its logic stranded in `App.vue`; don't repeat that.
 
 ---
 
@@ -148,7 +147,7 @@ Test cases:
 ### Phase 2 — Dice → break → dead wall, and the gap
 
 ```ts
-type Break = { total: number; seat: Seat; stack: number }
+type Break = { total: number; seat: Seat }   // the break is on the left side of stack `total` on `seat`'s wall
 
 computeBreak(die1: number, die2: number): Break
 deadWallStacks(brk: Break): Array<{ seat: Seat; stack: number }>   // length 7, ordered from the break
@@ -208,7 +207,7 @@ doraIndicatorSlot(brk: Break): Slot   // top layer of dead-wall stack 3
 
 Test cases:
 
-- Total 8 (East) → East stack 6, top.
+- Total 8 (North) → North stack 6, top.
 - Total 3 (West) → West stack 1, top.
 - Total 2 (South) → West stack 17, top (wrapped).
 - After a build, exactly one tile is face-up and it sits in that slot.
