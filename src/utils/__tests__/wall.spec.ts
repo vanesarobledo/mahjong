@@ -37,6 +37,14 @@ describe("building the wall", () => {
       },
     ]);
   }
+
+  function isInDeadWall(
+    slot: Slot,
+    deadWall: Array<{ seat: Seat; stack: number }>,
+  ): boolean {
+    return deadWall.some((s) => slot.seat === s.seat && slot.stack === s.stack);
+  }
+
   const tile: Tile = {
     id: 1,
     src: "",
@@ -386,11 +394,7 @@ describe("building the wall", () => {
         const otherAxis = axis === "x" ? "y" : "x";
 
         const pairs = allSlots()
-          .filter((slot) =>
-            expectedDeadWall.some(
-              (s) => slot.seat === s.seat && slot.stack === s.stack,
-            ),
-          )
+          .filter((slot) => isInDeadWall(slot, expectedDeadWall))
           .map((slot) => ({
             slot,
             base: slotPosition(slot),
@@ -433,9 +437,7 @@ describe("building the wall", () => {
       const pairs = allSlots()
         .filter(
           (slot) =>
-            !expectedDeadWall.some(
-              (s) => slot.seat === s.seat && slot.stack === s.stack,
-            ),
+            !isInDeadWall(slot, expectedDeadWall)
         )
         .map((slot) => ({
           slot,
