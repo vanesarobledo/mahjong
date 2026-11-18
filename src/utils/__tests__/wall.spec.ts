@@ -2,12 +2,20 @@ import { describe, expect, it } from "vitest";
 import {
   allSlots,
   type Orientation,
+  orientedRect,
   type Seat,
   seatOrientation,
   type Slot,
   slotPosition,
 } from "@/utils/wall.ts";
-import { STACK_OFFSET, TILE_WIDTH, WALL_SIZE } from "@/constants.ts";
+import {
+  STACK_OFFSET,
+  TILE_HEIGHT,
+  TILE_WIDTH,
+  WALL_SIZE,
+} from "@/constants.ts";
+import { rectsIntersect, tileToRect } from "@/utils/geometry.ts";
+import type { Tile } from "@/types.ts";
 
 describe("building the wall", () => {
   function wallSlots(seat: Seat): Slot[] {
@@ -25,6 +33,17 @@ describe("building the wall", () => {
       },
     ]);
   }
+  const tile: Tile = {
+    id: 1,
+    src: "",
+    name: "",
+    rotationY: 0,
+    rotationZ: 0,
+    isFaceUp: false,
+    x: 0,
+    y: 0,
+    zIndex: 1,
+  };
 
   describe("allSlots", () => {
     it("returns all 136 slots, all unique", () => {
@@ -223,7 +242,60 @@ describe("building the wall", () => {
 
     it.todo(
       "no two bottom-layer footprints overlap across all four walls, including corners",
-      () => {},
+      () => {
+        const wall = allSlots();
+        const bottomWall = wall
+          .filter((stack) => stack.layer === "bottom")
+          .map((slot) => {
+            const slotPos = slotPosition(slot);
+            const rect = orientedRect(slotPos, slotPos.orientation);
+            return {
+              label: `${slot.seat} ${slot.stack}`,
+              rect,
+            };
+          });
+
+        expect(bottomWall.length).toBe(wall.length / 2);
+
+        for (let i = 0; i < bottomWall.length; i++) {
+          for (let j = i + 1; j < bottomWall.length; j++) {
+            expect(
+              rectsIntersect(bottomWall[i].rect, bottomWall[j].rect),
+              `${bottomWall[i].label} vs ${bottomWall[j].label}`,
+            ).toBe(false);
+          }
+        }
+      },
     );
+  });
+
+  describe("orientedRect", () => {
+    it("at 0 / 180 equals today's tileToRect", () => {
+      const pos = {x: 100, y: 200};
+      const expected = tileToRect({... tile, ...pos});
+      const orientedRect0 = orientedRect(pos, 0);
+      const orientedRect180 = orientedRect(pos, 180);
+
+      expect(orientedRect0).toEqual(expected);
+      expect(orientedRect180).toEqual(expected);
+    });
+
+    it("at 90 / 270 has width and height swap around the tile's centre.", () => {
+      const pos = { x: 829, y: 817 };
+
+      expect(orientedRect(pos, 90)).toEqual({
+        left: 818,
+        right: 890,
+        top: 828,
+        bottom: 878,
+      });
+      expect(orientedRect(pos, 270)).toEqual({
+        left: 818,
+        right: 890,
+        top: 828,
+        bottom: 878,
+      });
+
+    });
   });
 });
