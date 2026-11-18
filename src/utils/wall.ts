@@ -96,10 +96,10 @@ export function slotPosition(
   if (brk) {
     const deadWall = deadWallStacks(brk);
     if (deadWall.find((s) => slot.stack === s.stack && slot.seat === s.seat)) {
-      if (slot.seat === "East") slotX += BREAK_GAP
-      if (slot.seat === "South") slotY -= BREAK_GAP
-      if (slot.seat === "West") slotX -= BREAK_GAP
-      if (slot.seat === "North") slotY += BREAK_GAP
+      if (brk.seat === "East") slotX += BREAK_GAP
+      if (brk.seat === "South") slotY -= BREAK_GAP;
+      if (brk.seat === "West") slotX -= BREAK_GAP;
+      if (brk.seat === "North") slotY += BREAK_GAP;
     }
   }
 
