@@ -159,7 +159,7 @@ Test cases:
 
 - `computeBreak` maps every total 2–12 to the right seat (a table test with `it.each` fits well).
 - `deadWallStacks` always returns 7 distinct stacks.
-- Total 8 (East): East 8, 7, 6, 5, 4, 3, 2. East stack 1 is _not_ dead.
+- Total 8 (North): North 8, 7, 6, 5, 4, 3, 2. North stack 1 is _not_ dead.
 - Total 12 (North): North 12 → 6, no wrap.
 - Total 3 (West): West 3, 2, 1, then North 17, 16, 15, 14 (wrap).
 - Total 2 (South): South 2, 1, then West 17, 16, 15, 14, 13 (wrap).
