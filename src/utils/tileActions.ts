@@ -1,6 +1,7 @@
 import type { Tile } from "@/types.ts";
-import type { Slot } from "@/utils/wall.ts";
+import { allSlots, type Slot } from "@/utils/wall.ts";
 
+const TOTAL_TILES = 136;
 export function flipTile(tile: Tile) {
   tile.isFaceUp = !tile.isFaceUp;
   tile.rotationY = tile.isFaceUp ? 0 : 180;
@@ -11,5 +12,13 @@ export function rotateTile(tile: Tile) {
 }
 
 export function assignTiles(shuffledIds: number[]): Map<number, Slot> {
-  return new Map();
-};
+  if (shuffledIds.length !== TOTAL_TILES) {
+    throw new Error(`Length of shuffled IDs must be ${TOTAL_TILES}`)
+  }
+
+  const wallSlots = allSlots();
+
+  return new Map(
+    wallSlots.map((slot, index) => [shuffledIds[index]!, slot])
+  );
+}
