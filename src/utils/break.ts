@@ -1,4 +1,3 @@
-// import type { Slot } from "vue";
 import type { Seat } from "@/utils/wall.ts";
 import { WALL_SIZE } from "@/constants.ts";
 

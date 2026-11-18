@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { Seat } from "@/utils/wall.ts";
+import { type Seat } from "@/utils/wall.ts";
 import { computeBreak, deadWallStacks } from "@/utils/break.ts";
 
-describe("break", () => {
+describe("breaking the wall", () => {
   describe("computeBreak", () => {
     it.each<{
       die1: number;
