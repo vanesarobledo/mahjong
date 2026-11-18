@@ -15,6 +15,7 @@ import { flipTile, rotateTile } from "@/utils/tileActions.ts";
 import { shuffle } from "@/utils/shuffle.ts";
 import { useMarquee } from "@/composables/useMarquee.ts";
 import { useSelection } from "@/composables/useSelection.ts";
+import { allSlots, slotPosition } from "@/utils/wall.ts";
 
 const boardRef = useTemplateRef("board");
 
@@ -186,6 +187,22 @@ function updateCoords(tile: Tile, position: Point) {
   tile.x = position.x;
   tile.y = position.y;
 }
+
+const wall = allSlots();
+const buildTheWallDryRun = () => {
+  shuffle(tiles.value);
+
+  const positions = wall.map((slot) => {
+    return slotPosition(slot);
+  })
+
+  tiles.value.forEach((tile, index) => {
+    tile.rotationY = 180;
+    tile.rotationZ = positions[index].orientation;
+    tile.x = positions[index].x;
+    tile.y = positions[index].y;
+  });
+};
 </script>
 
 <template>
@@ -194,6 +211,7 @@ function updateCoords(tile: Tile, position: Point) {
   <button @click="shuffleTiles">Shuffle Tiles</button>
   <button @click="orderTiles">Order Tiles</button>
   <button @click="selection.reset">Reset Selection</button>
+  <button @click="buildTheWallDryRun">Build the Wall</button>
 
   <div ref="board" class="board" @mousedown="handleMouseDown">
     <div
