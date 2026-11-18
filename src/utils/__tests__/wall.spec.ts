@@ -6,7 +6,8 @@ import {
   type Seat,
   seatOrientation,
   type Slot,
-  slotPosition, TABLE_SIZE,
+  slotPosition,
+  TABLE_SIZE,
 } from "@/utils/wall.ts";
 import {
   BREAK_GAP,
@@ -268,7 +269,7 @@ describe("building the wall", () => {
       }
     });
 
-    it('table square is calculated correctly using CORNER_GAP, WALL_SIZE, TILE_WIDTH, and HAND_MARGIN', () => {
+    it("table square is calculated correctly using CORNER_GAP, WALL_SIZE, TILE_WIDTH, and HAND_MARGIN", () => {
       const tableSquare: Rect = {
         top: HAND_MARGIN,
         left: HAND_MARGIN,
@@ -293,20 +294,21 @@ describe("building the wall", () => {
         bottom: TABLE_SIZE + HAND_MARGIN,
       };
       const wall = allSlots();
-      const wallFootprints = wall
-        .map((slot) => {
-          const slotPos = slotPosition(slot);
-          const rect = orientedRect(slotPos, slotPos.orientation);
-          return {
-            label: `${slot.seat} ${slot.stack}`,
-            rect,
-          };
-        });
+      const wallFootprints = wall.map((slot) => {
+        const slotPos = slotPosition(slot);
+        const rect = orientedRect(slotPos, slotPos.orientation);
+        return {
+          label: `${slot.seat} ${slot.stack}`,
+          rect,
+        };
+      });
 
       for (const [_i, wallFootprint] of wallFootprints.entries()) {
-        expect(rectsIntersect(wallFootprint.rect, tableSquare), `${wallFootprint.label}`).toBe(true);
+        expect(
+          rectsIntersect(wallFootprint.rect, tableSquare),
+          `${wallFootprint.label}`,
+        ).toBe(true);
       }
-
     });
   });
 
@@ -377,22 +379,78 @@ describe("building the wall", () => {
         axis: "x",
         offset: -BREAK_GAP,
       },
-    ])("when dead wall stack is all on the $brk.seat wall", ({ brk, axis, offset }) => {
-      const expectedDeadWall = deadWallStacks(brk);
+    ])(
+      "when dead wall stack is all on the $brk.seat wall",
+      ({ brk, axis, offset }) => {
+        const expectedDeadWall = deadWallStacks(brk);
+        const otherAxis = axis === "x" ? "y" : "x";
 
-      const pairs = allSlots()
-          .filter((slot) => expectedDeadWall.some((s) => slot.seat === s.seat && slot.stack === s.stack))
+        const pairs = allSlots()
+          .filter((slot) =>
+            expectedDeadWall.some(
+              (s) => slot.seat === s.seat && slot.stack === s.stack,
+            ),
+          )
           .map((slot) => ({
             slot,
             base: slotPosition(slot),
             shifted: slotPosition(slot, brk),
           }));
 
-      for (const { slot, base, shifted } of pairs) {
-        expect(shifted[axis], `${slot.seat} ${slot.stack} ${slot.layer}`)
-            .toBe(base[axis] + offset);
-      }
+        for (const { slot, base, shifted } of pairs) {
+          expect(
+            shifted[axis],
+            `${slot.seat} ${slot.stack} ${slot.layer}`,
+          ).toBe(base[axis] + offset);
+          expect(
+            shifted[otherAxis],
+            `${slot.seat} ${slot.stack} ${slot.layer}`,
+          ).toBe(base[otherAxis]);
+        }
+      },
+    );
 
+    it.each<Break>([
+      {
+        seat: "North",
+        total: 12,
+      },
+      {
+        seat: "East",
+        total: 9,
+      },
+      {
+        seat: "South",
+        total: 10,
+      },
+      {
+        seat: "West",
+        total: 11,
+      },
+    ])("stacks outside the dead wall don't move", (brk) => {
+      const expectedDeadWall = deadWallStacks(brk);
+
+      const pairs = allSlots()
+        .filter(
+          (slot) =>
+            !expectedDeadWall.some(
+              (s) => slot.seat === s.seat && slot.stack === s.stack,
+            ),
+        )
+        .map((slot) => ({
+          slot,
+          base: slotPosition(slot),
+          brk: slotPosition(slot, brk),
+        }));
+
+      for (const { slot, base, brk } of pairs) {
+        expect(brk["x"], `${slot.seat} ${slot.stack} ${slot.layer}`).toBe(
+          base["x"],
+        );
+        expect(brk["y"], `${slot.seat} ${slot.stack} ${slot.layer}`).toBe(
+          base["y"],
+        );
+      }
     });
 
     it.todo("when dead wall stack wraps into next wall");
