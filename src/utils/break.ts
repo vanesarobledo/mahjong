@@ -1,5 +1,6 @@
 // import type { Slot } from "vue";
 import type { Seat } from "@/utils/wall.ts";
+import { WALL_SIZE } from "@/constants.ts";
 
 export type Break = { total: number; seat: Seat; }
 
@@ -33,11 +34,28 @@ export function computeBreak(die1: number, die2: number): Break {
 
 export function deadWallStacks(brk: Break): Array<{ seat: Seat; stack: number }> {
   let deadWall = [];
+
+  let seat = brk.seat;
+  let stack = brk.total;
+  if (brk.seat === "North") stack += 17;
+  if (brk.seat === "West") stack += 34;
+  if (brk.seat === "South") stack += 51;
+
   for (let i = 0; i < 7; i++) {
+    let stackNum = Math.abs(stack - i) % WALL_SIZE;
+
+    // Wrap occurred
+    if (stackNum === 0) {
+      if (brk.seat === "East") seat = "South"
+      if (brk.seat === "North") seat = "East"
+      if (brk.seat === "West") seat = "North"
+      if (brk.seat === "South") seat = "West"
+    }
+
     deadWall.push({
-      seat: brk.seat,
-      stack: brk.total - i,
-    })
+      seat,
+      stack: stackNum === 0 ? WALL_SIZE : stackNum,
+    });
   }
   return deadWall;
 }
