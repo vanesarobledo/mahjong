@@ -240,7 +240,7 @@ describe("building the wall", () => {
       expect(Math.max(...northX)).toBeLessThan(Math.min(...southX));
     });
 
-    it.todo(
+    it(
       "no two bottom-layer footprints overlap across all four walls, including corners",
       () => {
         const wall = allSlots();

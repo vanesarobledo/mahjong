@@ -61,17 +61,17 @@ export function slotPosition(slot: Slot): Point & { orientation: Orientation } {
     slotY = 0;
 
   if (slot.seat === "East") {
-    slotX = ((WALL_SIZE - slot.stack) * TILE_WIDTH) + CORNER_GAP;
+    slotX = CORNER_GAP + ((WALL_SIZE - slot.stack) * TILE_WIDTH);
     slotY = (2 * CORNER_GAP) + WALL_LENGTH - TILE_HEIGHT;
   }
 
   if (slot.seat === "South") {
     slotX = (2 * CORNER_GAP) + WALL_LENGTH - TILE_HEIGHT;
-    slotY = CORNER_GAP + (slot.stack * TILE_WIDTH);
+    slotY = CORNER_GAP + ((slot.stack - 1) * TILE_WIDTH);
   }
 
   if (slot.seat === "West") {
-    slotX = CORNER_GAP + (slot.stack * TILE_WIDTH);
+    slotX = CORNER_GAP + ((slot.stack - 1) * TILE_WIDTH);
     slotY = 0;
   }
 
