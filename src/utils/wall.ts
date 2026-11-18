@@ -17,6 +17,10 @@ export type Orientation = 0 | 90 | 180 | 270;
 type Layer = "top" | "bottom";
 export type Slot = { seat: Seat; stack: number; layer: Layer };
 
+const WALL_LENGTH = WALL_SIZE * TILE_WIDTH;
+const SIDE_TILE_OFFSET = (TILE_HEIGHT - TILE_WIDTH) / 2;
+export const TABLE_SIZE = 2 * CORNER_GAP + WALL_LENGTH;
+
 export function allSlots(): Slot[] {
   let wallSlots: Slot[] = [];
 
@@ -56,8 +60,6 @@ export function slotPosition(
   slot: Slot,
   brk?: Break,
 ): Point & { orientation: Orientation } {
-  const WALL_LENGTH = WALL_SIZE * TILE_WIDTH;
-  const SIDE_TILE_OFFSET = (TILE_HEIGHT - TILE_WIDTH) / 2;
   const tileOrientation = seatOrientation(slot.seat);
 
   let slotX = 0,

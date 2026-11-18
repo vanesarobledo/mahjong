@@ -9,7 +9,7 @@ import {
   slotPosition,
 } from "@/utils/wall.ts";
 import { STACK_OFFSET, TILE_WIDTH, WALL_SIZE } from "@/constants.ts";
-import { rectsIntersect, tileToRect } from "@/utils/geometry.ts";
+import { type Rect, rectsIntersect, tileToRect } from "@/utils/geometry.ts";
 import type { Tile } from "@/types.ts";
 
 describe("building the wall", () => {
@@ -260,7 +260,32 @@ describe("building the wall", () => {
       }
     });
 
-    it.todo("every footprint lies inside the table square");
+    it.todo('table square is calculated correctly using CORNER_GAP');
+
+    it.todo("every footprint lies inside the table square", () => {
+      // TODO: Compute table square with TABLE_SIZE
+      const tableSquare: Rect = {
+          top: 0,
+          left: 0,
+          right: 1000,
+          bottom: 1000,
+        }
+      const wall = allSlots();
+      const wallFootprints = wall
+        .map((slot) => {
+          const slotPos = slotPosition(slot);
+          const rect = orientedRect(slotPos, slotPos.orientation);
+          return {
+            label: `${slot.seat} ${slot.stack}`,
+            rect,
+          };
+        });
+
+      for (const [i, wallFootprint] of wallFootprints.entries()) {
+        expect(rectsIntersect(wallFootprint.rect, tableSquare), `${wallFootprint.label}`).toBe(true);
+      }
+
+    });
   });
 
   describe("orientedRect", () => {
