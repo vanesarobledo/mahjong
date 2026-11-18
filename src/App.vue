@@ -194,7 +194,7 @@ const buildTheWallDryRun = () => {
 
   const positions = wall.map((slot) => {
     return slotPosition(slot);
-  })
+  });
 
   tiles.value.forEach((tile, index) => {
     tile.rotationY = 180;

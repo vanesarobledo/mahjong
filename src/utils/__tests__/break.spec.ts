@@ -92,11 +92,14 @@ describe("break", () => {
         die1: 1,
         die2: 8,
       },
-    ])("throws an error when dice inputs are out of range", ({ die1, die2 }) => {
-      expect(() => {
-        computeBreak(die1, die2);
-      }).toThrow("Dice rolled must be 1d6; only inputs 1-6 are allowed");
-    });
+    ])(
+      "throws an error when dice inputs are out of range",
+      ({ die1, die2 }) => {
+        expect(() => {
+          computeBreak(die1, die2);
+        }).toThrow("Dice rolled must be 1d6; only inputs 1-6 are allowed");
+      },
+    );
   });
 
   describe("deadWallStacks", () => {

@@ -52,7 +52,10 @@ export function seatOrientation(seat: Seat): Orientation {
 }
 
 // TODO: Add hand margins
-export function slotPosition(slot: Slot, brk?: Break): Point & { orientation: Orientation } {
+export function slotPosition(
+  slot: Slot,
+  brk?: Break,
+): Point & { orientation: Orientation } {
   const WALL_LENGTH = WALL_SIZE * TILE_WIDTH;
   const SIDE_TILE_OFFSET = (TILE_HEIGHT - TILE_WIDTH) / 2;
   const tileOrientation = seatOrientation(slot.seat);
@@ -61,17 +64,17 @@ export function slotPosition(slot: Slot, brk?: Break): Point & { orientation: Or
     slotY = 0;
 
   if (slot.seat === "East") {
-    slotX = CORNER_GAP + ((WALL_SIZE - slot.stack) * TILE_WIDTH);
-    slotY = (2 * CORNER_GAP) + WALL_LENGTH - TILE_HEIGHT;
+    slotX = CORNER_GAP + (WALL_SIZE - slot.stack) * TILE_WIDTH;
+    slotY = 2 * CORNER_GAP + WALL_LENGTH - TILE_HEIGHT;
   }
 
   if (slot.seat === "South") {
-    slotX = (2 * CORNER_GAP) + WALL_LENGTH - TILE_HEIGHT;
-    slotY = CORNER_GAP + ((slot.stack - 1) * TILE_WIDTH);
+    slotX = 2 * CORNER_GAP + WALL_LENGTH - TILE_HEIGHT;
+    slotY = CORNER_GAP + (slot.stack - 1) * TILE_WIDTH;
   }
 
   if (slot.seat === "West") {
-    slotX = CORNER_GAP + ((slot.stack - 1) * TILE_WIDTH);
+    slotX = CORNER_GAP + (slot.stack - 1) * TILE_WIDTH;
     slotY = 0;
   }
 
@@ -85,7 +88,7 @@ export function slotPosition(slot: Slot, brk?: Break): Point & { orientation: Or
   }
 
   if (slot.seat === "South" || slot.seat === "North") {
-    slotX += SIDE_TILE_OFFSET
+    slotX += SIDE_TILE_OFFSET;
     slotY -= SIDE_TILE_OFFSET;
   }
 
@@ -112,5 +115,5 @@ export function orientedRect(pos: Point, orientation: Orientation): Rect {
     right: centre.x + footprintWidth,
     top: centre.y - footprintHeight,
     bottom: centre.y + footprintHeight,
-  }
+  };
 }
