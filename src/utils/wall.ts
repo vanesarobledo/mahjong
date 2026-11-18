@@ -1,5 +1,3 @@
-// import type {Point, Rect} from "@/utils/geometry.ts";
-
 import type { Point, Rect } from "@/utils/geometry.ts";
 import {
   CORNER_GAP,
@@ -67,11 +65,11 @@ export function slotPosition(
 
   if (slot.seat === "East") {
     slotX = CORNER_GAP + (WALL_SIZE - slot.stack) * TILE_WIDTH;
-    slotY = 2 * CORNER_GAP + WALL_LENGTH - TILE_HEIGHT;
+    slotY = TABLE_SIZE - TILE_HEIGHT;
   }
 
   if (slot.seat === "South") {
-    slotX = 2 * CORNER_GAP + WALL_LENGTH - TILE_HEIGHT;
+    slotX = TABLE_SIZE - TILE_HEIGHT;
     slotY = CORNER_GAP + (slot.stack - 1) * TILE_WIDTH;
   }
 

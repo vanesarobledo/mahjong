@@ -6,9 +6,14 @@ import {
   type Seat,
   seatOrientation,
   type Slot,
-  slotPosition,
+  slotPosition, TABLE_SIZE,
 } from "@/utils/wall.ts";
-import { STACK_OFFSET, TILE_WIDTH, WALL_SIZE } from "@/constants.ts";
+import {
+  CORNER_GAP,
+  STACK_OFFSET,
+  TILE_WIDTH,
+  WALL_SIZE,
+} from "@/constants.ts";
 import { type Rect, rectsIntersect, tileToRect } from "@/utils/geometry.ts";
 import type { Tile } from "@/types.ts";
 
@@ -260,15 +265,29 @@ describe("building the wall", () => {
       }
     });
 
-    it.todo('table square is calculated correctly using CORNER_GAP');
+    it('table square is calculated correctly using CORNER_GAP, WALL_SIZE, and TILE_WIDTH', () => {
+      const tableSquare: Rect = {
+        top: 0,
+        left: 0,
+        right: TABLE_SIZE,
+        bottom: TABLE_SIZE,
+      }
+      const expectedSquare: Rect = {
+        top: 0,
+        left: 0,
+        right: 2 * CORNER_GAP + (WALL_SIZE * TILE_WIDTH),
+        bottom: 2 * CORNER_GAP + (WALL_SIZE * TILE_WIDTH),
+      };
 
-    it.todo("every footprint lies inside the table square", () => {
-      // TODO: Compute table square with TABLE_SIZE
+      expect(tableSquare).toEqual(expectedSquare);
+    });
+
+    it("every footprint lies inside the table square", () => {
       const tableSquare: Rect = {
           top: 0,
           left: 0,
-          right: 1000,
-          bottom: 1000,
+          right: TABLE_SIZE,
+          bottom: TABLE_SIZE,
         }
       const wall = allSlots();
       const wallFootprints = wall
@@ -281,7 +300,7 @@ describe("building the wall", () => {
           };
         });
 
-      for (const [i, wallFootprint] of wallFootprints.entries()) {
+      for (const [_i, wallFootprint] of wallFootprints.entries()) {
         expect(rectsIntersect(wallFootprint.rect, tableSquare), `${wallFootprint.label}`).toBe(true);
       }
 
