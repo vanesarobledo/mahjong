@@ -1,5 +1,6 @@
 import type { Point, Rect } from "@/utils/geometry.ts";
 import {
+  BREAK_GAP,
   CORNER_GAP,
   HAND_MARGIN,
   STACK_OFFSET,
@@ -7,7 +8,7 @@ import {
   TILE_WIDTH,
   WALL_SIZE,
 } from "@/constants.ts";
-import type { Break } from "@/utils/break.ts";
+import  { type Break, deadWallStacks } from "@/utils/break.ts";
 
 const SEATS = ["East", "South", "West", "North"] as const;
 
@@ -90,6 +91,18 @@ export function slotPosition(
   if (slot.seat === "South" || slot.seat === "North") {
     slotX += SIDE_TILE_OFFSET;
     slotY -= SIDE_TILE_OFFSET;
+  }
+
+  if (brk) {
+    const deadWall = deadWallStacks(brk);
+    if (deadWall.find((s) => slot.stack === s.stack && slot.seat === s.seat)) {
+      console.log(`${slot.seat} ${slot.stack} x: ${slotX}, y: ${slotY}`)
+      if (slot.seat === "East") slotX += BREAK_GAP
+      if (slot.seat === "South") slotY -= BREAK_GAP
+      if (slot.seat === "West") slotX -= BREAK_GAP
+      if (slot.seat === "North") slotY += BREAK_GAP
+      console.log(`x: ${slotX}, y: ${slotY}`)
+    }
   }
 
   slotX += HAND_MARGIN;
