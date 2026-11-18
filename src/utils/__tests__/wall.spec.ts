@@ -455,53 +455,36 @@ describe("building the wall", () => {
       }
     });
 
+
     it.each<{
       brk: Break;
-      axis: "x" | "y";
-      offset: number;
-      expectedWallOverlap: Seat;
+      expectedSeats: Seat[];
+      shift: { x: number; y: number };
     }>([
       {
-        brk: {
-          seat: "South",
-          total: 2,
-        },
-        axis: "y",
-        offset: -BREAK_GAP,
-        expectedWallOverlap: "West",
+        brk: { seat: "South", total: 2 },
+        expectedSeats: ["South", "West"],
+        shift: { x: 0, y: -BREAK_GAP }
       },
       {
-        brk: {
-          seat: "West",
-          total: 3,
-        },
-        axis: "x",
-        offset: -BREAK_GAP,
-        expectedWallOverlap: "North",
+        brk: { seat: "West", total: 3 },
+        expectedSeats: ["West", "North"],
+        shift: { x: -BREAK_GAP, y: 0 }
       },
       {
-        brk: {
-          seat: "North",
-          total: 4,
-        },
-        axis: "y",
-        offset: BREAK_GAP,
-        expectedWallOverlap: "East",
+        brk: { seat: "North", total: 4 },
+        expectedSeats: ["North", "East"],
+        shift: { x: 0, y: +BREAK_GAP }
       },
       {
-        brk: {
-          seat: "East",
-          total: 5,
-        },
-        axis: "x",
-        offset: BREAK_GAP,
-        expectedWallOverlap: "South",
+        brk: { seat: "East", total: 5 },
+        expectedSeats: ["East", "South"],
+        shift: { x: BREAK_GAP, y: 0 }
       },
     ])(
-      "when dead wall stack on $brk.seat wraps into next wall $expectedWallOverlap",
-      ({ brk, axis, offset, expectedWallOverlap }) => {
+      "dead wall from a $brk.seat break at $brk.total covers $expectedSeats and shifts as one piece",
+      ({ brk, expectedSeats, shift }) => {
         const expectedDeadWall = deadWallStacks(brk);
-        const otherAxis = axis === "x" ? "y" : "x";
 
         const pairs = allSlots()
           .filter((slot) => isInDeadWall(slot, expectedDeadWall))
@@ -511,24 +494,15 @@ describe("building the wall", () => {
             shifted: slotPosition(slot, brk),
           }));
 
-        const deadWallSeats = pairs.map((s) => {
-          return s.slot.seat;
-        });
-
-        expect(new Set(deadWallSeats).size).toBe(2);
-        expect(deadWallSeats.includes(expectedWallOverlap)).toBe(true);
+        expect(new Set(pairs.map(s => s.slot.seat))).toEqual(new Set(expectedSeats));
 
         for (const { slot, base, shifted } of pairs) {
-          expect(
-            shifted[axis],
-            `${slot.seat} ${slot.stack} ${slot.layer} ${axis}-axis`,
-          ).toBe(base[axis] + offset);
-          expect(
-            shifted[otherAxis],
-            `${slot.seat} ${slot.stack} ${slot.layer} ${otherAxis}-axis`,
-          ).toBe(base[otherAxis]);
+          const label = `${slot.seat} ${slot.stack} ${slot.layer}`;
+          expect(shifted.x, label).toBe(base.x + shift.x);
+          expect(shifted.y, label).toBe(base.y + shift.y);
         }
       },
     );
+
   });
 });
