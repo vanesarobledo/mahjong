@@ -32,6 +32,13 @@ export function computeBreak(die1: number, die2: number): Break {
   }
 }
 
-// export function deadWallStacks(brk: Break): Array<{ seat: Seat; stack: number }> {
-//
-// }
+export function deadWallStacks(brk: Break): Array<{ seat: Seat; stack: number }> {
+  let deadWall = [];
+  for (let i = 0; i < 7; i++) {
+    deadWall.push({
+      seat: brk.seat,
+      stack: i,
+    })
+  }
+  return deadWall;
+}

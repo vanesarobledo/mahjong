@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { Seat } from "@/utils/wall.ts";
-import { computeBreak } from "@/utils/break.ts";
+import { computeBreak, deadWallStacks } from "@/utils/break.ts";
 
-describe('break', () => {
-  describe('computeBreak', () => {
+describe("break", () => {
+  describe("computeBreak", () => {
     it.each<{
       die1: number;
       die2: number;
@@ -81,6 +81,21 @@ describe('break', () => {
 
       expect(wallBreak.total).toBe(total);
       expect(wallBreak.seat).toBe(seat);
+    });
+  });
+
+  describe("deadWallStacks", () => {
+    it("always returns 7 distinct stacks", () => {
+      const deadWall = deadWallStacks({ total: 12, seat: "North", stack: 12 });
+      // Convert objects to strings to test uniqueness
+      const keys = deadWall.map((slot) => {
+        return `${slot.seat},${slot.stack}`;
+      });
+
+      console.log(deadWall);
+
+      expect(deadWall.length).toEqual(7);
+      expect(new Set(keys).size).toEqual(deadWall.length);
     });
   });
 });
