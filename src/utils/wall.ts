@@ -51,6 +51,7 @@ export function seatOrientation(seat: Seat): Orientation {
   }
 }
 
+// TODO: Add hand margins
 export function slotPosition(slot: Slot, brk?: Break): Point & { orientation: Orientation } {
   const WALL_LENGTH = WALL_SIZE * TILE_WIDTH;
   const SIDE_TILE_OFFSET = (TILE_HEIGHT - TILE_WIDTH) / 2;

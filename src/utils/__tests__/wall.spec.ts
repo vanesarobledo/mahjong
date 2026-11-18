@@ -259,6 +259,8 @@ describe("building the wall", () => {
         }
       }
     });
+
+    it.todo("every footprint lies inside the table square");
   });
 
   describe("orientedRect", () => {
