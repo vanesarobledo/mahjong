@@ -108,7 +108,17 @@ describe("break", () => {
         expect(Math.max(...deadWallStackNumbers)).toBe(total);
         expect(deadWallStackNumbers.includes(1)).toBe(false);
       });
-      it.todo("stays on one wall at the highest total (12)");
+
+      it("stays on one wall at the highest total (12)", () => {
+        const total = 12;
+        const deadWall = deadWallStacks({ total, seat: "North" });
+        const deadWallSeats = deadWall.map((s) => {
+          return s.seat;
+        });
+
+        // TODO: Find better assertion?
+        expect(new Set(deadWallSeats).size).toBe(1);
+      });
     });
 
     describe("when the dead wall wraps into the next wall", () => {
