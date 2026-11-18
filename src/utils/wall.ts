@@ -97,10 +97,20 @@ export function slotPosition(slot: Slot): Point & { orientation: Orientation } {
 }
 
 export function orientedRect(pos: Point, orientation: Orientation): Rect {
+  const isRotated = orientation === 90 || orientation === 270;
+
+  const centre = {
+    x: pos.x + TILE_WIDTH / 2,
+    y: pos.y + TILE_HEIGHT / 2,
+  };
+
+  const footprintWidth = isRotated ? TILE_HEIGHT / 2 : TILE_WIDTH / 2;
+  const footprintHeight = isRotated ? TILE_WIDTH / 2 : TILE_HEIGHT / 2;
+
   return {
-    top: 0,
-    left: 0,
-    bottom: 0,
-    right: 0
+    left: centre.x - footprintWidth,
+    right: centre.x + footprintWidth,
+    top: centre.y - footprintHeight,
+    bottom: centre.y + footprintHeight,
   }
 }
