@@ -379,35 +379,18 @@ describe("building the wall", () => {
       },
     ])("when dead wall stack is all on the $brk.seat wall", ({ brk, axis, offset }) => {
       const expectedDeadWall = deadWallStacks(brk);
-      const baseWallSlotPositions = allSlots()
-        .map((slot) => {
-          return {
-            slot,
-            position: slotPosition(slot),
-          };
-        })
-        .filter((item) =>
-          expectedDeadWall.some((s) => {
-            return item.slot.seat === s.seat && item.slot.stack === s.stack;
-          }),
-        );
-      const breakWallSlotPositions = allSlots()
-        .map((slot) => {
-          return {
-            slot,
-            position: slotPosition(slot, brk),
-          };
-        })
-        .filter((item) =>
-          expectedDeadWall.some((s) => {
-            return item.slot.seat === s.seat && item.slot.stack === s.stack;
-          }),
-        );
 
-      for (const [_i, a] of baseWallSlotPositions.entries()) {
-        for (const b of breakWallSlotPositions) {
-          expect(b.position[axis], `${b.slot.seat} ${b.slot.stack}`).toBe(a.position[axis] + offset);
-        }
+      const pairs = allSlots()
+          .filter((slot) => expectedDeadWall.some((s) => slot.seat === s.seat && slot.stack === s.stack))
+          .map((slot) => ({
+            slot,
+            base: slotPosition(slot),
+            shifted: slotPosition(slot, brk),
+          }));
+
+      for (const { slot, base, shifted } of pairs) {
+        expect(shifted[axis], `${slot.seat} ${slot.stack} ${slot.layer}`)
+            .toBe(base[axis] + offset);
       }
 
     });
