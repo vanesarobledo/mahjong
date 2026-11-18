@@ -86,7 +86,7 @@ describe("break", () => {
 
   describe("deadWallStacks", () => {
     it("always returns 7 distinct stacks", () => {
-      const deadWall = deadWallStacks({ total: 12, seat: "North", stack: 12 });
+      const deadWall = deadWallStacks({ total: 12, seat: "North" });
       // Convert objects to strings to test uniqueness
       const keys = deadWall.map((slot) => {
         return `${slot.seat},${slot.stack}`;
@@ -122,9 +122,17 @@ describe("break", () => {
     });
 
     describe("when the dead wall wraps into the next wall", () => {
-      it.todo(
-        "continues from the next wall's stack 17 after running out of stacks (total 3)",
-      );
+      it("continues from the next wall's stack 17 after running out of stacks (total 3)", () => {
+        const total = 3;
+        const deadWall = deadWallStacks({ total, seat: "West" });
+        const nextWallWrap = deadWall.filter((s) => {
+          return s.seat === "North";
+        })
+
+        expect(nextWallWrap.length).toBe(4);
+        expect(deadWall.find((s) => s.stack === total)?.seat).toBe("West");
+        expect(deadWall.find((s) => s.stack === 17)?.seat).toBe("North");
+      });
       it.todo(
         "takes most of its stacks from the next wall at the lowest total (2)",
       );
