@@ -7,3 +7,4 @@ export const DRAG_THRESHOLD = 3;
 export const STACK_OFFSET = 8;
 export const CORNER_GAP = 80;
 export const HAND_MARGIN = TILE_HEIGHT + 80;
+export const BREAK_GAP = TILE_WIDTH / 2;

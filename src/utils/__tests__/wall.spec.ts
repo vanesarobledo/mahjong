@@ -9,6 +9,7 @@ import {
   slotPosition, TABLE_SIZE,
 } from "@/utils/wall.ts";
 import {
+  BREAK_GAP,
   CORNER_GAP,
   HAND_MARGIN,
   STACK_OFFSET,
@@ -17,6 +18,7 @@ import {
 } from "@/constants.ts";
 import { type Rect, rectsIntersect, tileToRect } from "@/utils/geometry.ts";
 import type { Tile } from "@/types.ts";
+import { type Break, deadWallStacks } from "@/utils/break.ts";
 
 describe("building the wall", () => {
   function wallSlots(seat: Seat): Slot[] {
@@ -335,5 +337,81 @@ describe("building the wall", () => {
         bottom: 878,
       });
     });
+  });
+
+  describe("the dead-wall stacks on the dice wall shift BREAK_GAP away from the break, toward the corner", () => {
+    it.each<{
+      brk: Break;
+      axis: "x" | "y";
+      offset: number;
+    }>([
+      {
+        brk: {
+          seat: "North",
+          total: 12,
+        },
+        axis: "y",
+        offset: BREAK_GAP,
+      },
+      {
+        brk: {
+          seat: "East",
+          total: 9,
+        },
+        axis: "x",
+        offset: BREAK_GAP,
+      },
+      {
+        brk: {
+          seat: "South",
+          total: 10,
+        },
+        axis: "y",
+        offset: -BREAK_GAP,
+      },
+      {
+        brk: {
+          seat: "West",
+          total: 11,
+        },
+        axis: "x",
+        offset: -BREAK_GAP,
+      },
+    ])("when dead wall stack is all on the $brk.seat wall", ({ brk, axis, offset }) => {
+      const expectedDeadWall = deadWallStacks(brk);
+      const baseWallSlotPositions = allSlots()
+        .map((slot) => {
+          return {
+            slot,
+            position: slotPosition(slot),
+          };
+        })
+        .filter((item) =>
+          expectedDeadWall.some((s) => {
+            return item.slot.seat === s.seat && item.slot.stack === s.stack;
+          }),
+        );
+      const breakWallSlotPositions = allSlots()
+        .map((slot) => {
+          return {
+            slot,
+            position: slotPosition(slot, brk),
+          };
+        })
+        .filter((item) =>
+          expectedDeadWall.some((s) => {
+            return item.slot.seat === s.seat && item.slot.stack === s.stack;
+          }),
+        );
+
+      for (const [_i, a] of baseWallSlotPositions.entries()) {
+        for (const b of breakWallSlotPositions) {
+          expect(b.position[axis], `${b.slot.seat} ${b.slot.stack}`).toBe(a.position[axis] + offset);
+        }
+      }
+
+    });
+
+    it.todo("when dead wall stack wraps into next wall");
   });
 });
