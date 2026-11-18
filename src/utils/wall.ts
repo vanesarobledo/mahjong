@@ -8,6 +8,7 @@ import {
   TILE_WIDTH,
   WALL_SIZE,
 } from "@/constants.ts";
+import type { Break } from "@/utils/break.ts";
 
 const SEATS = ["East", "South", "West", "North"] as const;
 
@@ -50,9 +51,7 @@ export function seatOrientation(seat: Seat): Orientation {
   }
 }
 
-
-// TODO: Adjust x/y based on offset when rotated for South & North
-export function slotPosition(slot: Slot): Point & { orientation: Orientation } {
+export function slotPosition(slot: Slot, brk?: Break): Point & { orientation: Orientation } {
   const WALL_LENGTH = WALL_SIZE * TILE_WIDTH;
   const SIDE_TILE_OFFSET = (TILE_HEIGHT - TILE_WIDTH) / 2;
   const tileOrientation = seatOrientation(slot.seat);

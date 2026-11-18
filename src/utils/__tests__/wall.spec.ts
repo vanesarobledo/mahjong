@@ -8,12 +8,7 @@ import {
   type Slot,
   slotPosition,
 } from "@/utils/wall.ts";
-import {
-  STACK_OFFSET,
-  TILE_HEIGHT,
-  TILE_WIDTH,
-  WALL_SIZE,
-} from "@/constants.ts";
+import { STACK_OFFSET, TILE_WIDTH, WALL_SIZE } from "@/constants.ts";
 import { rectsIntersect, tileToRect } from "@/utils/geometry.ts";
 import type { Tile } from "@/types.ts";
 
@@ -240,36 +235,36 @@ describe("building the wall", () => {
       expect(Math.max(...northX)).toBeLessThan(Math.min(...southX));
     });
 
-    it(
-      "no two bottom-layer footprints overlap across all four walls, including corners",
-      () => {
-        const wall = allSlots();
-        const bottomWall = wall
-          .filter((stack) => stack.layer === "bottom")
-          .map((slot) => {
-            const slotPos = slotPosition(slot);
-            const rect = orientedRect(slotPos, slotPos.orientation);
-            return {
-              label: `${slot.seat} ${slot.stack}`,
-              rect,
-            };
-          });
+    it("no two bottom-layer footprints overlap across all four walls, including corners", () => {
+      const wall = allSlots();
+      const bottomWall = wall
+        .filter((stack) => stack.layer === "bottom")
+        .map((slot) => {
+          const slotPos = slotPosition(slot);
+          const rect = orientedRect(slotPos, slotPos.orientation);
+          return {
+            label: `${slot.seat} ${slot.stack}`,
+            rect,
+          };
+        });
 
-        expect(bottomWall.length).toBe(wall.length / 2);
+      expect(bottomWall.length).toBe(wall.length / 2);
 
-        for (const [i, a] of bottomWall.entries()) {
-          for (const b of bottomWall.slice(i + 1)) {
-            expect(rectsIntersect(a.rect, b.rect), `${a.label} vs ${b.label}`).toBe(false);
-          }
+      for (const [i, a] of bottomWall.entries()) {
+        for (const b of bottomWall.slice(i + 1)) {
+          expect(
+            rectsIntersect(a.rect, b.rect),
+            `${a.label} vs ${b.label}`,
+          ).toBe(false);
         }
-      },
-    );
+      }
+    });
   });
 
   describe("orientedRect", () => {
     it("at 0 / 180 equals today's tileToRect", () => {
-      const pos = {x: 100, y: 200};
-      const expected = tileToRect({... tile, ...pos});
+      const pos = { x: 100, y: 200 };
+      const expected = tileToRect({ ...tile, ...pos });
       const orientedRect0 = orientedRect(pos, 0);
       const orientedRect180 = orientedRect(pos, 180);
 
@@ -292,7 +287,6 @@ describe("building the wall", () => {
         top: 828,
         bottom: 878,
       });
-
     });
   });
 });
