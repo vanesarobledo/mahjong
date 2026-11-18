@@ -10,6 +10,7 @@ import {
 } from "@/utils/wall.ts";
 import {
   CORNER_GAP,
+  HAND_MARGIN,
   STACK_OFFSET,
   TILE_WIDTH,
   WALL_SIZE,
@@ -265,18 +266,18 @@ describe("building the wall", () => {
       }
     });
 
-    it('table square is calculated correctly using CORNER_GAP, WALL_SIZE, and TILE_WIDTH', () => {
+    it('table square is calculated correctly using CORNER_GAP, WALL_SIZE, TILE_WIDTH, and HAND_MARGIN', () => {
       const tableSquare: Rect = {
-        top: 0,
-        left: 0,
-        right: TABLE_SIZE,
-        bottom: TABLE_SIZE,
-      }
+        top: HAND_MARGIN,
+        left: HAND_MARGIN,
+        right: TABLE_SIZE + HAND_MARGIN,
+        bottom: TABLE_SIZE + HAND_MARGIN,
+      };
       const expectedSquare: Rect = {
-        top: 0,
-        left: 0,
-        right: 2 * CORNER_GAP + (WALL_SIZE * TILE_WIDTH),
-        bottom: 2 * CORNER_GAP + (WALL_SIZE * TILE_WIDTH),
+        top: HAND_MARGIN,
+        left: HAND_MARGIN,
+        right: 2 * CORNER_GAP + WALL_SIZE * TILE_WIDTH + HAND_MARGIN,
+        bottom: 2 * CORNER_GAP + WALL_SIZE * TILE_WIDTH + HAND_MARGIN,
       };
 
       expect(tableSquare).toEqual(expectedSquare);
@@ -284,11 +285,11 @@ describe("building the wall", () => {
 
     it("every footprint lies inside the table square", () => {
       const tableSquare: Rect = {
-          top: 0,
-          left: 0,
-          right: TABLE_SIZE,
-          bottom: TABLE_SIZE,
-        }
+        top: HAND_MARGIN,
+        left: HAND_MARGIN,
+        right: TABLE_SIZE + HAND_MARGIN,
+        bottom: TABLE_SIZE + HAND_MARGIN,
+      };
       const wall = allSlots();
       const wallFootprints = wall
         .map((slot) => {

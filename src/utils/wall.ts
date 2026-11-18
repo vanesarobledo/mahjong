@@ -1,6 +1,7 @@
 import type { Point, Rect } from "@/utils/geometry.ts";
 import {
   CORNER_GAP,
+  HAND_MARGIN,
   STACK_OFFSET,
   TILE_HEIGHT,
   TILE_WIDTH,
@@ -53,7 +54,6 @@ export function seatOrientation(seat: Seat): Orientation {
   }
 }
 
-// TODO: Add hand margins
 export function slotPosition(
   slot: Slot,
   brk?: Break,
@@ -91,6 +91,9 @@ export function slotPosition(
     slotX += SIDE_TILE_OFFSET;
     slotY -= SIDE_TILE_OFFSET;
   }
+
+  slotX += HAND_MARGIN;
+  slotY += HAND_MARGIN;
 
   return {
     x: slotX,
