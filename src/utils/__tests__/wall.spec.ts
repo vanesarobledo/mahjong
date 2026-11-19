@@ -344,10 +344,76 @@ describe("building the wall", () => {
   });
 
   describe("the dead-wall stacks on the dice wall shift BREAK_GAP away from the break, toward the corner", () => {
+    it.each<{ brk: Break; expected: Array<{ seat: Seat; stack: number }> }>([
+      {
+        brk: {
+          seat: "South",
+          total: 2,
+        },
+        expected: [
+          { seat: "South", stack: 2 },
+          { seat: "South", stack: 1 },
+          { seat: "West", stack: 17 },
+          { seat: "West", stack: 16 },
+          { seat: "West", stack: 15 },
+          { seat: "West", stack: 14 },
+          { seat: "West", stack: 13 },
+        ],
+      },
+      {
+        brk: {
+          seat: "West",
+          total: 3,
+        },
+        expected: [
+          { seat: "West", stack: 3 },
+          { seat: "West", stack: 2 },
+          { seat: "West", stack: 1 },
+          { seat: "North", stack: 17 },
+          { seat: "North", stack: 16 },
+          { seat: "North", stack: 15 },
+          { seat: "North", stack: 14 },
+        ],
+      },
+      {
+        brk: {
+          seat: "North",
+          total: 4,
+        },
+        expected: [
+          { seat: "North", stack: 4 },
+          { seat: "North", stack: 3 },
+          { seat: "North", stack: 2 },
+          { seat: "North", stack: 1 },
+          { seat: "East", stack: 17 },
+          { seat: "East", stack: 16 },
+          { seat: "East", stack: 15 },
+        ],
+      },
+      {
+        brk: {
+          seat: "East",
+          total: 5,
+        },
+        expected: [
+          { seat: "East", stack: 5 },
+          { seat: "East", stack: 4 },
+          { seat: "East", stack: 3 },
+          { seat: "East", stack: 2 },
+          { seat: "East", stack: 1 },
+          { seat: "South", stack: 17 },
+          { seat: "South", stack: 16 },
+        ],
+      },
+    ])("dead wall for $brk.seat $brk.total", ({ brk, expected }) => {
+      expect(deadWallStacks(brk)).toEqual(expected);
+    });
+
     it.each<{
       brk: Break;
       axis: "x" | "y";
       offset: number;
+      expectedDeadWall: Array<{ seat: Seat; stack: number }>;
     }>([
       {
         brk: {
@@ -356,6 +422,15 @@ describe("building the wall", () => {
         },
         axis: "y",
         offset: BREAK_GAP,
+        expectedDeadWall: [
+          { seat: "North", stack: 12 },
+          { seat: "North", stack: 11 },
+          { seat: "North", stack: 10 },
+          { seat: "North", stack: 9 },
+          { seat: "North", stack: 8 },
+          { seat: "North", stack: 7 },
+          { seat: "North", stack: 6 },
+        ],
       },
       {
         brk: {
@@ -364,6 +439,15 @@ describe("building the wall", () => {
         },
         axis: "x",
         offset: BREAK_GAP,
+        expectedDeadWall: [
+          { seat: "East", stack: 9 },
+          { seat: "East", stack: 8 },
+          { seat: "East", stack: 7 },
+          { seat: "East", stack: 6 },
+          { seat: "East", stack: 5 },
+          { seat: "East", stack: 4 },
+          { seat: "East", stack: 3 },
+        ],
       },
       {
         brk: {
@@ -372,6 +456,15 @@ describe("building the wall", () => {
         },
         axis: "y",
         offset: -BREAK_GAP,
+        expectedDeadWall: [
+          { seat: "South", stack: 10 },
+          { seat: "South", stack: 9 },
+          { seat: "South", stack: 8 },
+          { seat: "South", stack: 7 },
+          { seat: "South", stack: 6 },
+          { seat: "South", stack: 5 },
+          { seat: "South", stack: 4 },
+        ],
       },
       {
         brk: {
@@ -380,11 +473,19 @@ describe("building the wall", () => {
         },
         axis: "x",
         offset: -BREAK_GAP,
+        expectedDeadWall: [
+          { seat: "West", stack: 11 },
+          { seat: "West", stack: 10 },
+          { seat: "West", stack: 9 },
+          { seat: "West", stack: 8 },
+          { seat: "West", stack: 7 },
+          { seat: "West", stack: 6 },
+          { seat: "West", stack: 5 },
+        ],
       },
     ])(
       "when dead wall stack is all on the $brk.seat wall",
-      ({ brk, axis, offset }) => {
-        const expectedDeadWall = deadWallStacks(brk);
+      ({ brk, axis, offset, expectedDeadWall }) => {
         const otherAxis = axis === "x" ? "y" : "x";
 
         const pairs = allSlots()
@@ -450,63 +551,13 @@ describe("building the wall", () => {
 
     it.each<{
       brk: Break;
-      expectedSeats: Seat[];
       shift: { x: number; y: number };
+      expectedDeadWall: Array<{ seat: Seat; stack: number }>;
     }>([
       {
         brk: { seat: "South", total: 2 },
-        expectedSeats: ["South", "West"],
         shift: { x: 0, y: -BREAK_GAP },
-      },
-      {
-        brk: { seat: "West", total: 3 },
-        expectedSeats: ["West", "North"],
-        shift: { x: -BREAK_GAP, y: 0 },
-      },
-      {
-        brk: { seat: "North", total: 4 },
-        expectedSeats: ["North", "East"],
-        shift: { x: 0, y: +BREAK_GAP },
-      },
-      {
-        brk: { seat: "East", total: 5 },
-        expectedSeats: ["East", "South"],
-        shift: { x: BREAK_GAP, y: 0 },
-      },
-    ])(
-      "dead wall from a $brk.seat break at $brk.total covers $expectedSeats and shifts as one piece",
-      ({ brk, expectedSeats, shift }) => {
-        const expectedDeadWall = deadWallStacks(brk);
-
-        console.log(expectedDeadWall);
-
-        const pairs = allSlots()
-          .filter((slot) => isInDeadWall(slot, expectedDeadWall))
-          .map((slot) => ({
-            slot,
-            base: slotPosition(slot),
-            shifted: slotPosition(slot, brk),
-          }));
-
-        expect(new Set(pairs.map((s) => s.slot.seat))).toEqual(
-          new Set(expectedSeats),
-        );
-
-        for (const { slot, base, shifted } of pairs) {
-          const label = `${slot.seat} ${slot.stack} ${slot.layer}`;
-          expect(shifted.x, label).toBe(base.x + shift.x);
-          expect(shifted.y, label).toBe(base.y + shift.y);
-        }
-      },
-    );
-
-    it.each<{ brk: Break; expected: Array<{ seat: Seat; stack: number }> }>([
-      {
-        brk: {
-          seat: "South",
-          total: 2,
-        },
-        expected: [
+        expectedDeadWall: [
           { seat: "South", stack: 2 },
           { seat: "South", stack: 1 },
           { seat: "West", stack: 17 },
@@ -517,11 +568,9 @@ describe("building the wall", () => {
         ],
       },
       {
-        brk: {
-          seat: "West",
-          total: 3,
-        },
-        expected: [
+        brk: { seat: "West", total: 3 },
+        shift: { x: -BREAK_GAP, y: 0 },
+        expectedDeadWall: [
           { seat: "West", stack: 3 },
           { seat: "West", stack: 2 },
           { seat: "West", stack: 1 },
@@ -532,11 +581,9 @@ describe("building the wall", () => {
         ],
       },
       {
-        brk: {
-          seat: "North",
-          total: 4,
-        },
-        expected: [
+        brk: { seat: "North", total: 4 },
+        shift: { x: 0, y: +BREAK_GAP },
+        expectedDeadWall: [
           { seat: "North", stack: 4 },
           { seat: "North", stack: 3 },
           { seat: "North", stack: 2 },
@@ -547,11 +594,9 @@ describe("building the wall", () => {
         ],
       },
       {
-        brk: {
-          seat: "East",
-          total: 5,
-        },
-        expected: [
+        brk: { seat: "East", total: 5 },
+        shift: { x: BREAK_GAP, y: 0 },
+        expectedDeadWall: [
           { seat: "East", stack: 5 },
           { seat: "East", stack: 4 },
           { seat: "East", stack: 3 },
@@ -561,9 +606,26 @@ describe("building the wall", () => {
           { seat: "South", stack: 16 },
         ],
       },
-    ])("dead wall for $brk.seat $brk.total", ({ brk, expected }) => {
-      expect(deadWallStacks(brk)).toEqual(expected);
-    });
+    ])(
+      "dead wall from a $brk.seat break at $brk.total shifts as one piece",
+      ({ brk, shift, expectedDeadWall }) => {
+        const pairs = allSlots()
+          .filter((slot) => isInDeadWall(slot, expectedDeadWall))
+          .map((slot) => ({
+            slot,
+            base: slotPosition(slot),
+            shifted: slotPosition(slot, brk),
+          }));
+
+        expect(pairs.length).toBe(14);
+
+        for (const { slot, base, shifted } of pairs) {
+          const label = `${slot.seat} ${slot.stack} ${slot.layer}`;
+          expect(shifted.x, label).toBe(base.x + shift.x);
+          expect(shifted.y, label).toBe(base.y + shift.y);
+        }
+      },
+    );
   });
 
   describe("assignTiles", () => {
@@ -582,7 +644,7 @@ describe("building the wall", () => {
       expect(tilesToSlots).toEqual(expectedMap);
     });
 
-    it("throws if not given exactly 136 unique IDs", () => {
+    it("throws if not given exactly 136 IDs", () => {
       expect(() => {
         assignTiles(Array.from({ length: TOTAL_TILES + 1 }, (_, i) => i + 1));
       }).toThrow("Length of shuffled IDs must be 136");
