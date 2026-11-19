@@ -14,6 +14,7 @@ import {
   CORNER_GAP,
   HAND_MARGIN,
   STACK_OFFSET,
+  TILE_HEIGHT,
   TILE_WIDTH,
   WALL_SIZE,
 } from "@/constants.ts";
@@ -44,19 +45,6 @@ describe("building the wall", () => {
   ): boolean {
     return deadWall.some((s) => slot.seat === s.seat && slot.stack === s.stack);
   }
-
-  const tile: Tile = {
-    id: 1,
-    src: "",
-    name: "",
-    rotationY: 0,
-    rotationZ: 0,
-    orientation: 0,
-    isFaceUp: false,
-    x: 0,
-    y: 0,
-    zIndex: 1,
-  };
 
   describe("allSlots", () => {
     it("returns all 136 slots, all unique", () => {
@@ -322,9 +310,14 @@ describe("building the wall", () => {
   });
 
   describe("orientedRect", () => {
-    it("at 0 / 180 equals today's tileToRect", () => {
+    it("at 0 / 180 returns rect the size of tile width and height", () => {
       const pos = { x: 100, y: 200 };
-      const expected = tileToRect({ ...tile, ...pos });
+      const expected = {
+        left: pos.x,
+        right: pos.x + TILE_WIDTH,
+        top: pos.y,
+        bottom: pos.y + TILE_HEIGHT
+      }
       const orientedRect0 = orientedRect(pos, 0);
       const orientedRect180 = orientedRect(pos, 180);
 
