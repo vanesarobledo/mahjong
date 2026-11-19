@@ -295,7 +295,7 @@ function updateCoords(tile: Tile, position: Point) {
   transform: rotateY(180deg);
 }
 
-.selected {
+.selected > .tile-3d {
   outline: 3px rgb(255, 215, 0) solid;
   outline-offset: -1px;
   border-radius: 3px;
