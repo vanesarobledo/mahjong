@@ -325,7 +325,7 @@ describe("building the wall", () => {
       expect(orientedRect180).toEqual(expected);
     });
 
-    it("at 90 / 270 has width and height swap around the tile's centre.", () => {
+    it("at 90 / 270 has width and height swap around the tile's centre", () => {
       const pos = { x: 829, y: 817 };
 
       expect(orientedRect(pos, 90)).toEqual({

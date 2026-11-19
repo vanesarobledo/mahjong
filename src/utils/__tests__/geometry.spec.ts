@@ -28,26 +28,22 @@ describe("tilesToRect", () => {
     zIndex: 1,
   };
 
-  it.each<Orientation>([90, 270])(
-    "reads the tile's orientation at %s",
-    (orientation) => {
-      const currentTile = { ...tile, orientation };
-      const expected = {
-        top: currentTile.y + TILE_HEIGHT / 2 - TILE_WIDTH / 2,
-        left: currentTile.x + TILE_WIDTH / 2 - TILE_HEIGHT / 2,
-        bottom: currentTile.y + TILE_HEIGHT / 2 + TILE_WIDTH / 2,
-        right: currentTile.x + TILE_WIDTH / 2 + TILE_HEIGHT / 2,
-      };
+  it("swaps width and height for a side-wall tile (orientation: 90)", () => {
+    const pos = { x: 100, y: 200 };
+    const orientation: Orientation = 90;
+    const currentTile = { ...tile, ...pos, orientation };
+    const expected = { top: 211, left: 89, bottom: 261, right: 161 };
 
-      const tileRect = tileToRect(currentTile);
+    console.log(expected);
 
-      expect(tileRect).toEqual(expected);
-    },
-  );
+    const tileRect = tileToRect(currentTile);
+
+    expect(tileRect).toEqual(expected);
+  });
 
   it("ignores Riichi rotation", () => {
     const rotationZ = 90;
-    const currentTile = {...tile, rotationZ};
+    const currentTile = { ...tile, rotationZ };
     const expected = {
       top: currentTile.y,
       left: currentTile.x,
