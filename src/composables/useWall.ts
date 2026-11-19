@@ -3,13 +3,14 @@ import type { Tile } from "@/types.ts";
 import { shuffle } from "@/utils/shuffle.ts";
 import { computeBreak } from "@/utils/break.ts";
 import { assignTiles, slotPosition } from "@/utils/wall.ts";
+import type { useSelection } from "@/composables/useSelection.ts";
 
 export type Phase = "idle" | "building" | "rolling" | "breaking";
 export const useWall = (
   boardRef: Readonly<ShallowRef<HTMLDivElement | null, HTMLDivElement | null>>,
   tiles: Ref<Tile[]>,
   frontMostTile: Ref<number>,
-  selection,
+  selection: ReturnType<typeof useSelection>,
 ) => {
   const diceResult: Ref<{ die1: number; die2: number }> = ref({
     die1: 0,
@@ -26,9 +27,10 @@ export const useWall = (
   }
 
   function buildWall(): void {
-    // 1. Shuffle all of the tiles and assign them to slots
+    // 1. Shuffle all of the tiles and assign them to slots, reset selection
     shuffle(tiles.value);
     const slots = assignTiles(tiles.value.map((t) => t.id));
+    selection.reset();
 
     // 2. Roll dice and set result
     rollDice(rollD6(), rollD6());
