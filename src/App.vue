@@ -11,7 +11,7 @@ import {
   TILE_WIDTH,
   TILES_PER_ROW,
 } from "@/constants.ts";
-import { flipTile, rotateTile } from "@/utils/tileActions.ts";
+import { bringToFront, flipTile, rotateTile } from "@/utils/tileActions.ts";
 import { shuffle } from "@/utils/shuffle.ts";
 import { useMarquee } from "@/composables/useMarquee.ts";
 import { useSelection } from "@/composables/useSelection.ts";
@@ -112,7 +112,7 @@ function handlePick(tile: Tile) {
 
     restackTiles(groupTiles);
   }
-  bringToFront(tile);
+  bringToFront(tile, frontMostTile);
 }
 
 function restackTiles(group: Array<Tile>) {
@@ -120,7 +120,7 @@ function restackTiles(group: Array<Tile>) {
     return a.zIndex - b.zIndex;
   });
 
-  group.forEach(bringToFront);
+  group.forEach((t) => bringToFront(t, frontMostTile));
 }
 
 function handleTileMove(position: Point, tile: Tile) {
@@ -151,11 +151,6 @@ function handleOnEnd(e: MouseEvent, tile: Tile) {
   if (!e.shiftKey && !selection.isInGroup(tile.id)) {
     selection.reset();
   }
-}
-
-function bringToFront(tile: Tile) {
-  tile.zIndex = frontMostTile.value;
-  frontMostTile.value += 1;
 }
 
 function orderTiles() {
