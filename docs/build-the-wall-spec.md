@@ -206,6 +206,14 @@ Test cases: `tileToRect` for orientations 0 and 90; existing marquee behaviour i
 - Only this composable calls `Math.random` (dice and shuffle).
 - Board centering: table origin computed from `boardRef` width.
 
+`phase` is written only by `buildWall()`. The component reads it in three places:
+
+| Consumer          | Reads phase to decide…                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| Toolbar dice line | Show "Rolling…" or the result text                                                     |
+| Build Wall button | `disabled` while a sequence is running                                                 |
+| `.board` class    | Add the `building` class, which turns on the `left`/`top` transition and `pointer-events: none` |
+
 Manual acceptance (browser):
 
 - [ ] Clicking Build Wall from any board state ends in the final state above.
