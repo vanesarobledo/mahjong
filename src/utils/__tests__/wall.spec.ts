@@ -478,6 +478,8 @@ describe("building the wall", () => {
       ({ brk, expectedSeats, shift }) => {
         const expectedDeadWall = deadWallStacks(brk);
 
+        console.log(expectedDeadWall);
+
         const pairs = allSlots()
           .filter((slot) => isInDeadWall(slot, expectedDeadWall))
           .map((slot) => ({
@@ -497,6 +499,71 @@ describe("building the wall", () => {
         }
       },
     );
+
+    it.each<{ brk: Break; expected: Array<{ seat: Seat; stack: number }> }>([
+      {
+        brk: {
+          seat: "South",
+          total: 2,
+        },
+        expected: [
+          { seat: "South", stack: 2 },
+          { seat: "South", stack: 1 },
+          { seat: "West", stack: 17 },
+          { seat: "West", stack: 16 },
+          { seat: "West", stack: 15 },
+          { seat: "West", stack: 14 },
+          { seat: "West", stack: 13 },
+        ],
+      },
+      {
+        brk: {
+          seat: "West",
+          total: 3,
+        },
+        expected: [
+          { seat: "West", stack: 3 },
+          { seat: "West", stack: 2 },
+          { seat: "West", stack: 1 },
+          { seat: "North", stack: 17 },
+          { seat: "North", stack: 16 },
+          { seat: "North", stack: 15 },
+          { seat: "North", stack: 14 },
+        ],
+      },
+      {
+        brk: {
+          seat: "North",
+          total: 4,
+        },
+        expected: [
+          { seat: "North", stack: 4 },
+          { seat: "North", stack: 3 },
+          { seat: "North", stack: 2 },
+          { seat: "North", stack: 1 },
+          { seat: "East", stack: 17 },
+          { seat: "East", stack: 16 },
+          { seat: "East", stack: 15 },
+        ],
+      },
+      {
+        brk: {
+          seat: "East",
+          total: 5,
+        },
+        expected: [
+          { seat: "East", stack: 5 },
+          { seat: "East", stack: 4 },
+          { seat: "East", stack: 3 },
+          { seat: "East", stack: 2 },
+          { seat: "East", stack: 1 },
+          { seat: "South", stack: 17 },
+          { seat: "South", stack: 16 },
+        ],
+      },
+    ])("dead wall for $brk.seat $brk.total", ({ brk, expected }) => {
+      expect(deadWallStacks(brk)).toEqual(expected);
+    });
   });
 
   describe("assignTiles", () => {
