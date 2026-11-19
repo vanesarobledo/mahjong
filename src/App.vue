@@ -16,6 +16,7 @@ import { shuffle } from "@/utils/shuffle.ts";
 import { useMarquee } from "@/composables/useMarquee.ts";
 import { useSelection } from "@/composables/useSelection.ts";
 import { useWall } from "@/composables/useWall.ts";
+import { MIN_BOARD_HEIGHT, TABLE_SIZE } from "./utils/wall";
 
 const boardRef = useTemplateRef("board");
 
@@ -36,6 +37,7 @@ const tiles = ref(
 );
 
 const frontMostTile = ref(Tiles.length);
+
 const dragStartPos: Ref<Point | null> = ref(null);
 const activeDragId: Ref<number | null> = ref(null);
 const groupDragOrigin = ref(new Map<number, Point>());
@@ -170,8 +172,8 @@ function orderTiles() {
 
 function shuffleTiles() {
   const board = boardRef.value;
-  const boardWidth = board ? board.clientWidth : 800;
-  const boardHeight = board ? board.clientHeight : 1000;
+  const boardWidth = board ? board.clientWidth : TABLE_SIZE;
+  const boardHeight = board ? board.clientHeight : MIN_BOARD_HEIGHT;
 
   shuffle(tiles.value);
 
@@ -201,7 +203,14 @@ function updateCoords(tile: Tile, position: Point) {
   <button @click="selection.reset">Reset Selection</button>
   <button @click="buildWall">Build the Wall</button>
 
-  <div ref="board" class="board" @mousedown="handleMouseDown">
+  <div
+    ref="board"
+    class="board"
+    :style="{
+      'min-height': `max(100vh, ${MIN_BOARD_HEIGHT}px)`,
+    }"
+    @mousedown="handleMouseDown"
+  >
     <div
       class="marquee"
       v-show="marquee"
@@ -248,7 +257,6 @@ function updateCoords(tile: Tile, position: Point) {
 .board {
   position: relative;
   perspective: 800px;
-  min-height: 100vh;
 }
 
 .tile {
