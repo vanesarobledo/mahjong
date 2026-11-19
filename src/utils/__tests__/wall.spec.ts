@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   allSlots,
+  assignTiles,
   type Orientation,
   orientedRect,
   type Seat,
@@ -18,8 +19,7 @@ import {
   TILE_WIDTH,
   WALL_SIZE,
 } from "@/constants.ts";
-import { type Rect, rectsIntersect, tileToRect } from "@/utils/geometry.ts";
-import type { Tile } from "@/types.ts";
+import { type Rect, rectsIntersect } from "@/utils/geometry.ts";
 import { type Break, deadWallStacks } from "@/utils/break.ts";
 
 describe("building the wall", () => {
@@ -316,8 +316,8 @@ describe("building the wall", () => {
         left: pos.x,
         right: pos.x + TILE_WIDTH,
         top: pos.y,
-        bottom: pos.y + TILE_HEIGHT
-      }
+        bottom: pos.y + TILE_HEIGHT,
+      };
       const orientedRect0 = orientedRect(pos, 0);
       const orientedRect180 = orientedRect(pos, 180);
 
@@ -429,10 +429,7 @@ describe("building the wall", () => {
       const expectedDeadWall = deadWallStacks(brk);
 
       const pairs = allSlots()
-        .filter(
-          (slot) =>
-            !isInDeadWall(slot, expectedDeadWall)
-        )
+        .filter((slot) => !isInDeadWall(slot, expectedDeadWall))
         .map((slot) => ({
           slot,
           base: slotPosition(slot),
@@ -440,15 +437,16 @@ describe("building the wall", () => {
         }));
 
       for (const { slot, base, brk } of pairs) {
-        expect(brk["x"], `${slot.seat} ${slot.stack} ${slot.layer} x-axis`).toBe(
-          base["x"],
-        );
-        expect(brk["y"], `${slot.seat} ${slot.stack} ${slot.layer} y-axis`).toBe(
-          base["y"],
-        );
+        expect(
+          brk["x"],
+          `${slot.seat} ${slot.stack} ${slot.layer} x-axis`,
+        ).toBe(base["x"]);
+        expect(
+          brk["y"],
+          `${slot.seat} ${slot.stack} ${slot.layer} y-axis`,
+        ).toBe(base["y"]);
       }
     });
-
 
     it.each<{
       brk: Break;
@@ -458,22 +456,22 @@ describe("building the wall", () => {
       {
         brk: { seat: "South", total: 2 },
         expectedSeats: ["South", "West"],
-        shift: { x: 0, y: -BREAK_GAP }
+        shift: { x: 0, y: -BREAK_GAP },
       },
       {
         brk: { seat: "West", total: 3 },
         expectedSeats: ["West", "North"],
-        shift: { x: -BREAK_GAP, y: 0 }
+        shift: { x: -BREAK_GAP, y: 0 },
       },
       {
         brk: { seat: "North", total: 4 },
         expectedSeats: ["North", "East"],
-        shift: { x: 0, y: +BREAK_GAP }
+        shift: { x: 0, y: +BREAK_GAP },
       },
       {
         brk: { seat: "East", total: 5 },
         expectedSeats: ["East", "South"],
-        shift: { x: BREAK_GAP, y: 0 }
+        shift: { x: BREAK_GAP, y: 0 },
       },
     ])(
       "dead wall from a $brk.seat break at $brk.total covers $expectedSeats and shifts as one piece",
@@ -488,7 +486,9 @@ describe("building the wall", () => {
             shifted: slotPosition(slot, brk),
           }));
 
-        expect(new Set(pairs.map(s => s.slot.seat))).toEqual(new Set(expectedSeats));
+        expect(new Set(pairs.map((s) => s.slot.seat))).toEqual(
+          new Set(expectedSeats),
+        );
 
         for (const { slot, base, shifted } of pairs) {
           const label = `${slot.seat} ${slot.stack} ${slot.layer}`;
@@ -497,6 +497,28 @@ describe("building the wall", () => {
         }
       },
     );
+  });
 
+  describe("assignTiles", () => {
+    const TOTAL_TILES = 136;
+    const ids = Array.from({ length: TOTAL_TILES }, (_, i) => i + 1);
+
+    it("the same id order gives the same assignment", () => {
+      const slots = allSlots();
+      const differentIds = [...ids].reverse();
+      const expectedMap = new Map(
+        slots.map((slot, index) => [differentIds[index], slot]),
+      );
+
+      const tilesToSlots = assignTiles(differentIds);
+
+      expect(tilesToSlots).toEqual(expectedMap);
+    });
+
+    it("throws if not given exactly 136 unique IDs", () => {
+      expect(() => {
+        assignTiles(Array.from({ length: TOTAL_TILES + 1 }, (_, i) => i + 1));
+      }).toThrow("Length of shuffled IDs must be 136");
+    });
   });
 });

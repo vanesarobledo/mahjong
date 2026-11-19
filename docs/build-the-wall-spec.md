@@ -58,7 +58,7 @@ Source: [Wikipedia — Japanese mahjong](https://en.wikipedia.org/wiki/Japanese_
 5. **Stacks render with the top tile offset upward in _screen_ space** (the viewer's camera), for every wall. Offsetting along each wall's own orientation would make side-wall stacks look like they're leaning sideways.
 6. **Fixed table size derived from constants**, centered horizontally on the board, page scrolls on small screens. `TABLE_SIZE = 2 × CORNER_GAP + WALL_SIZE × TILE_WIDTH`. `slotPosition` adds `HAND_MARGIN` to both x and y, so the square sits down and to the right of the board's corner, leaving room for future hand zones. This shifts the square; it does not enlarge the board. The composable adds the horizontal centering origin (which depends on board width at runtime). Hand zones are not designed here.
 7. **Randomness stays at the edge.** Pure functions take dice values (and an already-shuffled id order) as arguments. Only the composable calls `Math.random`.
-8. **Code layout:** slot geometry in `src/utils/wall.ts`; dice, break, and dead wall in `src/utils/break.ts`; `assignTiles` in `src/utils/tileActions.ts`. A `useWall(...)` composable owns dice state, the build sequence, and `buildWall()`. Dependencies (`tiles`, `frontMostTile`, `selection`, `boardRef`) are passed in explicitly, the way `useMarquee` receives its dependencies.
+8. **Code layout:** slot geometry and `assignTiles` in `src/utils/wall.ts`; dice, break, and dead wall in `src/utils/break.ts`. A `useWall(...)` composable owns dice state, the build sequence, and `buildWall()`. Dependencies (`tiles`, `frontMostTile`, `selection`, `boardRef`) are passed in explicitly, the way `useMarquee` receives its dependencies.
 9. **The dead wall moves as one rigid piece.** With a break, every dead-wall stack shifts by the same `BREAK_GAP` vector, pointing away from the break along the dice wall's axis. This includes stacks that wrapped onto the next wall: they move along the dice wall's axis too, not along their own wall.
    - _Why:_ an earlier version shifted each dead-wall stack along its own wall's axis, which pulled the wrapped part around the corner in a different direction from the rest. One vector keeps the 7 stacks visually together as a single dead wall.
 
@@ -176,7 +176,7 @@ Test cases:
 
 ### Phase 3 — Assign tiles to slots
 
-**Done.** `assignTiles` lives in `src/utils/tileActions.ts`. It pairs each id with the slot at the same index in `allSlots()` and throws if it isn't given 136 ids. Tests are in `tileActions.spec.ts`.
+**Done.** `assignTiles` lives in `src/utils/wall.ts`. It pairs each id with the slot at the same index in `allSlots()` and throws if it isn't given 136 ids. Tests are in `wall.spec.ts`.
 
 ```ts
 assignTiles(shuffledIds: number[]): Map<number, Slot>   // tile id → slot
