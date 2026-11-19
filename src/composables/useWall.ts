@@ -43,12 +43,16 @@ export const useWall = (
       const position = slotPosition(slot);
 
       tile.rotationY = 180;
+      tile.rotationZ = 0;
       tile.orientation = position.orientation;
       tile.x = position.x;
       tile.y = position.y;
-    });
 
-    // Update z-index of each tile so that all top stack tiles are above the bottom stack
+      if (slot.layer === "top") {
+        tile.zIndex = frontMostTile.value;
+        frontMostTile.value++;
+      }
+    });
 
     // 4. Break the wall
     const brk = computeBreak(diceResult.value.die1, diceResult.value.die2);
