@@ -15,13 +15,12 @@ import { flipTile, rotateTile } from "@/utils/tileActions.ts";
 import { shuffle } from "@/utils/shuffle.ts";
 import { useMarquee } from "@/composables/useMarquee.ts";
 import { useSelection } from "@/composables/useSelection.ts";
-import { allSlots, slotPosition } from "@/utils/wall.ts";
-import { computeBreak } from "@/utils/break.ts";
+import { useWall } from "@/composables/useWall.ts";
 
 const boardRef = useTemplateRef("board");
 
 const tiles = ref(
-  Tiles.map((t, index) : Tile => {
+  Tiles.map((t, index): Tile => {
     const pos = getInitializedPosition(index);
     return {
       ...t,
@@ -45,6 +44,12 @@ const selection = useSelection();
 const { marquee, rect, handleMouseDown } = useMarquee(
   boardRef,
   tiles,
+  selection,
+);
+const { diceResult, phase, buildWall } = useWall(
+  boardRef,
+  tiles,
+  frontMostTile,
   selection,
 );
 
@@ -191,29 +196,6 @@ function updateCoords(tile: Tile, position: Point) {
   tile.x = position.x;
   tile.y = position.y;
 }
-
-const wall = allSlots();
-const buildTheWallDryRun = () => {
-  shuffle(tiles.value);
-
-  const die1 = Math.floor(Math.random() * 6);
-  const die2 = Math.floor(Math.random() * 6);
-
-  const brk = computeBreak(die1, die2);
-
-  console.log(brk);
-
-  const positions = wall.map((slot) => {
-    return slotPosition(slot, brk);
-  });
-
-  tiles.value.forEach((tile, index) => {
-    tile.rotationY = 180;
-    tile.orientation = positions[index].orientation;
-    tile.x = positions[index].x;
-    tile.y = positions[index].y;
-  });
-};
 </script>
 
 <template>
@@ -222,7 +204,7 @@ const buildTheWallDryRun = () => {
   <button @click="shuffleTiles">Shuffle Tiles</button>
   <button @click="orderTiles">Order Tiles</button>
   <button @click="selection.reset">Reset Selection</button>
-  <button @click="buildTheWallDryRun">Build the Wall</button>
+  <button @click="buildWall">Build the Wall</button>
 
   <div ref="board" class="board" @mousedown="handleMouseDown">
     <div
