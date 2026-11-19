@@ -40,7 +40,7 @@ export function deadWallStacks(
   if (brk.seat === "South") stack += 51;
 
   for (let i = 0; i < 7; i++) {
-    let stackNum = Math.abs(stack - i) % WALL_SIZE;
+    let stackNum = (((stack - i) % WALL_SIZE) + WALL_SIZE) % WALL_SIZE;
 
     // Wrap occurred
     if (stackNum === 0) {
