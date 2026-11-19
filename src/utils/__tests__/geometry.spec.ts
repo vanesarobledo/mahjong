@@ -32,18 +32,31 @@ describe("tilesToRect", () => {
     "reads the tile's orientation at %s",
     (orientation) => {
       const currentTile = { ...tile, orientation };
-
-      const tileRect = tileToRect(currentTile);
-      const tileOrientRect = {
+      const expected = {
         top: currentTile.y + TILE_HEIGHT / 2 - TILE_WIDTH / 2,
         left: currentTile.x + TILE_WIDTH / 2 - TILE_HEIGHT / 2,
         bottom: currentTile.y + TILE_HEIGHT / 2 + TILE_WIDTH / 2,
         right: currentTile.x + TILE_WIDTH / 2 + TILE_HEIGHT / 2,
       };
 
-      expect(tileRect).toEqual(tileOrientRect);
+      const tileRect = tileToRect(currentTile);
+
+      expect(tileRect).toEqual(expected);
     },
   );
 
-  it("", () => {});
+  it("ignores Riichi rotation", () => {
+    const rotationZ = 90;
+    const currentTile = {...tile, rotationZ};
+    const expected = {
+      top: currentTile.y,
+      left: currentTile.x,
+      bottom: currentTile.y + TILE_HEIGHT,
+      right: currentTile.x + TILE_WIDTH,
+    };
+
+    const tileRect = tileToRect(currentTile);
+
+    expect(tileRect).toEqual(expected);
+  });
 });
