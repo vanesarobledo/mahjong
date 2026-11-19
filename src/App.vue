@@ -196,16 +196,34 @@ function updateCoords(tile: Tile, position: Point) {
 </script>
 
 <template>
-  <h1>Mahjong Test</h1>
+  <h1>Mahjong</h1>
 
-  <button @click="shuffleTiles">Shuffle Tiles</button>
-  <button @click="orderTiles">Order Tiles</button>
-  <button @click="selection.reset">Reset Selection</button>
-  <button @click="buildWall">Build the Wall</button>
+  <div id="toolbar">
+    <div id="buttons">
+      <button @click="shuffleTiles">Shuffle Tiles</button>
+      <button @click="orderTiles">Order Tiles</button>
+      <button @click="selection.reset">Reset Selection</button>
+      <button @click="buildWall" :disabled="phase === 'building'">
+        Build the Wall
+      </button>
+    </div>
+    <div id="message">
+      <span v-if="phase === 'idle'"> Idle. </span>
+      <span v-else-if="phase === 'building'">Building the wall... </span>
+      <span v-else-if="phase === 'rolling'">
+        <span v-if="diceResult.die1 > 0 && diceResult.die2 > 0">
+          {{ diceResult.die1 }} + {{ diceResult.die2 }} = {{ diceResult.total }}
+        </span>
+        <span v-else> Rolling... </span>
+      </span>
+      <span v-else>Nothing.</span>
+    </div>
+  </div>
 
   <div
     ref="board"
     class="board"
+    :class="phase === 'building' ? 'building' : ''"
     :style="{
       'min-height': `max(100vh, ${MIN_BOARD_HEIGHT}px)`,
     }"
@@ -254,6 +272,16 @@ function updateCoords(tile: Tile, position: Point) {
 </template>
 
 <style scoped>
+#toolbar {
+  display: flex;
+  gap: 2em;
+}
+
+#buttons {
+  display: flex;
+  gap: 0.5em;
+}
+
 .board {
   position: relative;
   perspective: 800px;
@@ -308,5 +336,10 @@ function updateCoords(tile: Tile, position: Point) {
   position: absolute;
   pointer-events: none;
   border: 2px dashed #ccc;
+}
+
+.building {
+  /* transition */
+  pointer-events: none;
 }
 </style>

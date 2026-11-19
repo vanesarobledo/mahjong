@@ -21,9 +21,10 @@ export const useWall = (
   frontMostTile: Ref<number>,
   selection: ReturnType<typeof useSelection>,
 ) => {
-  const diceResult: Ref<{ die1: number; die2: number }> = ref({
+  const diceResult: Ref<{ die1: number; die2: number, total: number }> = ref({
     die1: 0,
     die2: 0,
+    total: 0,
   });
   const phase: Ref<Phase> = ref("idle");
 
@@ -42,6 +43,7 @@ export const useWall = (
     phase.value = "rolling";
     diceResult.value.die1 = die1;
     diceResult.value.die2 = die2;
+    diceResult.value.total = die1 + die2;
   }
 
   function resetTiles(slots: Map<number, Slot>) {
@@ -89,6 +91,8 @@ export const useWall = (
   }
 
   function buildWall(): void {
+    phase.value = "building";
+
     // 1. Shuffle all of the tiles and assign them to slots, reset selection
     const slots = shuffleTilesToSlots();
 
@@ -100,10 +104,12 @@ export const useWall = (
     resetTiles(slots);
     placeTiles(slots, xOffset);
 
-    // 4. Break the wall
+    // 4. Break the wall and slide it
     breakWall(slots, xOffset);
 
     // 5. Flip the dora indicator
+
+    phase.value = "idle";
   }
 
   return {
