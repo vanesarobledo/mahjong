@@ -203,7 +203,7 @@ function updateCoords(tile: Tile, position: Point) {
       <button @click="shuffleTiles">Shuffle Tiles</button>
       <button @click="orderTiles">Order Tiles</button>
       <button @click="selection.reset">Reset Selection</button>
-      <button @click="buildWall" :disabled="phase === 'building'">
+      <button @click="buildWall" :disabled="phase !== 'idle'">
         Build the Wall
       </button>
     </div>
