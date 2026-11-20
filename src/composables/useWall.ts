@@ -28,9 +28,8 @@ export const useWall = (
   });
   const phase: Ref<Phase> = ref("idle");
 
-  const boardWidth = boardRef.value ? boardRef.value.clientWidth : 1010;
-
   function getBoardXOffset(): number {
+    const boardWidth = boardRef.value ? boardRef.value.clientWidth : 1010;
     const tableOriginX =  (boardWidth - TABLE_SIZE) / 2 - HAND_MARGIN;
     return Math.max(0, tableOriginX);
   }
