@@ -44,6 +44,10 @@ export const useWall = (
   });
 
   function wait(ms: number): Promise<void> {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return Promise.resolve();
+    }
+
     return new Promise((resolve) => {
       const id = setTimeout(() => {
         pendingTimers.delete(id);
