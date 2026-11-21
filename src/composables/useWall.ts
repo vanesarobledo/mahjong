@@ -136,7 +136,7 @@ export const useWall = (
       const slot = slots.get(tile.id);
       if (!slot) throw new Error("Need all 136 tiles");
 
-      if (slot.seat === doraSlot.seat && slot.stack === doraSlot.stack && slot.stack === doraSlot.stack) {
+      if (slot.seat === doraSlot.seat && slot.stack === doraSlot.stack && slot.layer === doraSlot.layer) {
         tile.isFaceUp = true;
         tile.rotationY = 0;
       }
