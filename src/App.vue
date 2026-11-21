@@ -7,6 +7,7 @@ import { hasMoved, type Point } from "@/utils/geometry.ts";
 import {
   BREAK_MS,
   BUILD_SLIDE_MS,
+  BUILD_STAGGER_MS,
   DRAG_THRESHOLD,
   TILE_HEIGHT,
   TILE_PADDING,
@@ -249,7 +250,7 @@ function updateCoords(tile: Tile, position: Point) {
       }"
     ></div>
     <TileDraggable
-      v-for="tile in tiles"
+      v-for="(tile, i) in tiles"
       :key="tile.id"
       :container-ref="boardRef"
       class="tile"
@@ -257,7 +258,11 @@ function updateCoords(tile: Tile, position: Point) {
       :initial-y="tile.y"
       :prevent-default="true"
       :class="{ selected: selection.selectedIds.value.has(tile.id) }"
-      :style="{ zIndex: tile.zIndex }"
+      :style="{
+        zIndex: tile.zIndex,
+        transitionDelay:
+          phase === 'building' ? i * BUILD_STAGGER_MS + `ms` : 0 + `ms`,
+      }"
       @click="handleClick($event, tile)"
       @contextmenu.prevent="handleContextMenu(tile)"
       @pick="handlePick(tile)"
