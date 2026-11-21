@@ -75,7 +75,7 @@ Source: [Wikipedia — Japanese mahjong](https://en.wikipedia.org/wiki/Japanese_
 | `HAND_MARGIN`      | `TILE_HEIGHT + 80` | Offset of the table square from the board's top-left   |
 | `BUILD_SLIDE_MS`   | 600                | Beat 1: tiles slide into the closed square             |
 | `DICE_REVEAL_MS`   | 400                | Beat 2: "Rolling…" resolves to the result              |
-| `BREAK_MS`         | 400                | Beat 3: gap opens, dora flips                          |
+| `BREAK_MS`         | 400                | Beat 3: gap opens (the dora flips once it finishes)    |
 | `BUILD_STAGGER_MS` | ~5 (optional)      | Per-slot delay so the wall "fills in"                  |
 
 ---
@@ -91,7 +91,7 @@ Source: [Wikipedia — Japanese mahjong](https://en.wikipedia.org/wiki/Japanese_
 
 1. **Build** (`BUILD_SLIDE_MS`): all 136 tiles slide from wherever they are into a **closed** 4-wall square (no break gap) and flip face-down.
 2. **Roll** (`DICE_REVEAL_MS`): the toolbar shows "Rolling…", which resolves to e.g. **"Dice: 3 + 5 = 8 → West wall"**.
-3. **Break** (`BREAK_MS`): the break gap opens and the dora indicator flips face-up.
+3. **Break** (`BREAK_MS`): the break gap opens. Once the gap has fully opened, the dora indicator flips face-up, so the break and the reveal read as two separate moments.
 
 The dice line stays visible until the next build.
 
@@ -99,7 +99,7 @@ The dice line stays visible until the next build.
 
 - `useDraggable` positions tiles with inline `left`/`top`. A permanent `transition: left, top` on `.tile` would make every drag lag behind the cursor and make group drag rubber-band (it moves tiles through the same prop → `watch` path).
 - So: `.board` gets a `building` class while the sequence runs, and the `left`/`top` transition is scoped to `.board.building .tile`.
-- While `building`, the board has `pointer-events: none`. A drag started mid-transition would have the tile's position written by both the CSS transition and `useDraggable`. This is a ~1.4s UI lock, not a rules check.
+- While `building`, the board has `pointer-events: none`. A drag started mid-transition would have the tile's position written by both the CSS transition and `useDraggable`. This is a brief UI lock (a second or two, including the dora flip), not a rules check.
 - **`prefers-reduced-motion: reduce`:** skip the slide and gap animation (and the flip transition); jump to the final broken-wall state. The dice text still appears. ([MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion))
 - Timers started by the sequence must be cleaned up if the component unmounts mid-build.
 
@@ -217,7 +217,7 @@ Test cases: `tileToRect` for orientations 0 and 90; existing marquee behaviour i
 Manual acceptance (browser):
 
 - [ ] Clicking Build Wall from any board state ends in the final state above.
-- [ ] The three beats play in order; total ≈ 1.4s.
+- [ ] The three beats play in order, and the dora flips after the gap has finished opening.
 - [ ] Clicks and drags do nothing during the sequence; the button is disabled.
 - [ ] After the sequence, drag is instant again (no lag), and group drag doesn't rubber-band.
 - [ ] With reduced motion on (macOS: System Settings → Accessibility → Display → Reduce motion), the final state appears immediately with the dice line.

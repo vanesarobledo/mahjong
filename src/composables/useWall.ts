@@ -1,7 +1,7 @@
 import {onScopeDispose, ref, type Ref, type ShallowRef} from "vue";
 import type {Tile} from "@/types.ts";
 import {shuffle} from "@/utils/shuffle.ts";
-import {type Break, computeBreak} from "@/utils/break.ts";
+import {type Break, computeBreak, doraIndicatorSlot} from "@/utils/break.ts";
 import {assignTiles, type Seat, type Slot, slotPosition, TABLE_SIZE,} from "@/utils/wall.ts";
 import type {useSelection} from "@/composables/useSelection.ts";
 import {bringToFront} from "@/utils/tileActions.ts";
@@ -160,11 +160,27 @@ export const useWall = (
 
     // Beat 3: Break
     breakWall(slots, xOffset);
-    // TODO: Flip the Dora indicator
+
     await wait(BREAK_MS);
+
+    // Dora flip
+    const doraSlot = doraIndicatorSlot(brk.value);
+    for (const [i, slot] of slots.entries()) {
+      if (slot.seat === doraSlot.seat && slot.stack == doraSlot.stack && slot.layer === "top") {
+        tiles.value.find((t) =>  {
+          if (i === t.id) {
+            t.isFaceUp = true;
+            t.rotationY = 0;
+          }
+        });
+
+        break;
+      }
+    }
 
     phase.value = "idle";
   }
+
 
   return {
     diceResult,
