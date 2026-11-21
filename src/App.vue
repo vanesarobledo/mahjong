@@ -7,7 +7,6 @@ import { hasMoved, type Point } from "@/utils/geometry.ts";
 import {
   BREAK_MS,
   BUILD_SLIDE_MS,
-  BUILD_STAGGER_MS,
   DRAG_THRESHOLD,
   TILE_HEIGHT,
   TILE_PADDING,
@@ -223,7 +222,8 @@ function updateCoords(tile: Tile, position: Point) {
       <span v-if="phase === 'building'">Building the wall... </span>
       <span v-else-if="phase === 'rolling'"> Rolling...</span>
       <span v-else-if="diceResult.total > 0">
-        {{ diceResult.die1 }} + {{ diceResult.die2 }} = {{ diceResult.total }} → {{ diceResult.wall }} Wall
+        {{ diceResult.die1 }} + {{ diceResult.die2 }} = {{ diceResult.total }} →
+        {{ diceResult.wall }} Wall
       </span>
     </div>
   </div>
@@ -231,7 +231,7 @@ function updateCoords(tile: Tile, position: Point) {
   <div
     ref="board"
     class="board"
-    :class="phase === 'building' ? 'building' : ''"
+    :class="isBuilding ? 'building' : ''"
     :style="{
       'min-height': `max(100vh, ${MIN_BOARD_HEIGHT}px)`,
     }"
@@ -348,8 +348,8 @@ function updateCoords(tile: Tile, position: Point) {
 
 .board.building .tile {
   transition:
-    left v-bind("slide_ms + `px`"),
-    v-bind("slide_ms + `px`");
+    left v-bind("slide_ms + `ms`"),
+    v-bind("slide_ms + `ms`");
   pointer-events: none;
 }
 </style>
