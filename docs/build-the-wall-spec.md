@@ -202,6 +202,10 @@ Test cases: `tileToRect` for orientations 0 and 90; existing marquee behaviour i
 
 ### Phase 5 — `useWall` composable, button, dice line, sequence
 
+**Done.** `useWall` lives in `src/composables/useWall.ts` and returns `diceResult`, `phase`, and `buildWall()`. The beats are sequenced with `setTimeout`, wrapped in a `wait(ms)` helper. Timer ids go into a `pendingTimers` set, which `onScopeDispose` clears. Under `prefers-reduced-motion: reduce`, `wait` resolves immediately, and `App.vue` sets the tile slide and `.tile-3d` flip transitions to `0ms`. The table's horizontal origin comes from `boardRef.clientWidth`.
+
+The per-slot stagger is a `transitionDelay` of `i × BUILD_STAGGER_MS` per tile, applied only during `building`. Beat 1 waits `BUILD_SLIDE_MS + 135 × BUILD_STAGGER_MS` so the last tile can land. The slide duration is bound with `v-bind` in CSS (`BUILD_SLIDE_MS` while building, `BREAK_MS` while breaking). The toolbar also shows "Building the wall…" during beat 1. All manual acceptance checks pass.
+
 - `useWall(boardRef, tiles, frontMostTile, selection)` exposes the dice result, the current phase (e.g. `'idle' | 'building' | 'rolling' | 'breaking'`), and `buildWall()`.
 - Only this composable calls `Math.random` (dice and shuffle).
 - Board centering: table origin computed from `boardRef` width.
@@ -216,14 +220,16 @@ Test cases: `tileToRect` for orientations 0 and 90; existing marquee behaviour i
 
 Manual acceptance (browser):
 
-- [ ] Clicking Build Wall from any board state ends in the final state above.
-- [ ] The three beats play in order, and the dora flips after the gap has finished opening.
-- [ ] Clicks and drags do nothing during the sequence; the button is disabled.
-- [ ] After the sequence, drag is instant again (no lag), and group drag doesn't rubber-band.
-- [ ] With reduced motion on (macOS: System Settings → Accessibility → Display → Reduce motion), the final state appears immediately with the dice line.
-- [ ] Building twice in a row works; the second build uses fresh dice.
+- [x] Clicking Build Wall from any board state ends in the final state above.
+- [x] The three beats play in order, and the dora flips after the gap has finished opening.
+- [x] Clicks and drags do nothing during the sequence; the button is disabled.
+- [x] After the sequence, drag is instant again (no lag), and group drag doesn't rubber-band.
+- [x] With reduced motion on (macOS: System Settings → Accessibility → Display → Reduce motion), the final state appears immediately with the dice line.
+- [x] Building twice in a row works; the second build uses fresh dice.
 
 ### Phase 6 — Dora flip
+
+**In progress.** `doraIndicatorSlot` lives in `src/utils/break.ts`. It takes the third entry of `deadWallStacks` (index 2), adds `layer: 'top'`, and throws if the entry is missing. Its three table tests are in `break.spec.ts`. In `useWall`, `flipDora(slots)` runs after `await wait(BREAK_MS)`, so the dora flips once the gap has opened. It finds the tile by looking up each tile's slot with `slots.get(tile.id)`. The last test case ("exactly one tile is face-up") is not written yet.
 
 ```ts
 doraIndicatorSlot(brk: Break): Slot   // top layer of dead-wall stack 3
