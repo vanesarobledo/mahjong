@@ -6,7 +6,13 @@ import {assignTiles, type Seat, type Slot, slotPosition, TABLE_SIZE,} from "@/ut
 import type {useSelection} from "@/composables/useSelection.ts";
 import {bringToFront} from "@/utils/tileActions.ts";
 import {Tiles} from "@/data/tiles.ts";
-import {BREAK_MS, BUILD_SLIDE_MS, DICE_REVEAL_MS, HAND_MARGIN,} from "@/constants.ts";
+import {
+  BREAK_MS,
+  BUILD_SLIDE_MS,
+  BUILD_STAGGER_MS,
+  DICE_REVEAL_MS,
+  HAND_MARGIN,
+} from "@/constants.ts";
 
 export type Phase = "idle" | "building" | "rolling" | "breaking";
 
@@ -138,7 +144,7 @@ export const useWall = (
     resetTiles(slots);
     placeTiles(slots, xOffset);
 
-    await wait(BUILD_SLIDE_MS);
+    await wait(BUILD_SLIDE_MS + (Tiles.length - 1) * BUILD_STAGGER_MS);
 
     // Beat 2: Roll the dice
     phase.value = "rolling";

@@ -60,9 +60,6 @@ const { diceResult, phase, buildWall } = useWall(
 
 const isBuilding = computed(() => phase.value !== "idle");
 const slide_ms = computed(() => {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    return 0;
-  }
   if (phase.value === "building") {
     return BUILD_SLIDE_MS;
   }
@@ -357,7 +354,7 @@ function updateCoords(tile: Tile, position: Point) {
 .board.building .tile {
   transition:
     left v-bind("slide_ms + `ms`"),
-    v-bind("slide_ms + `ms`");
+    top v-bind("slide_ms + `ms`");
   pointer-events: none;
 }
 
