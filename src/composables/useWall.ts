@@ -165,18 +165,15 @@ export const useWall = (
 
     // Dora flip
     const doraSlot = doraIndicatorSlot(brk.value);
-    for (const [i, slot] of slots.entries()) {
-      if (slot.seat === doraSlot.seat && slot.stack == doraSlot.stack && slot.layer === "top") {
-        tiles.value.find((t) =>  {
-          if (i === t.id) {
-            t.isFaceUp = true;
-            t.rotationY = 0;
-          }
-        });
+    tiles.value.find((tile) => {
+      const slot = slots.get(tile.id);
+      if (!slot) throw new Error("Need all 136 tiles");
 
-        break;
+      if (slot.seat === doraSlot.seat && slot.stack === doraSlot.stack) {
+        tile.isFaceUp = true;
+        tile.rotationY = 0;
       }
-    }
+    });
 
     phase.value = "idle";
   }
