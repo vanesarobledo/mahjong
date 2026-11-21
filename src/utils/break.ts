@@ -1,4 +1,4 @@
-import type { Seat } from "@/utils/wall.ts";
+import type { Seat, Slot } from "@/utils/wall.ts";
 import { WALL_SIZE } from "@/constants.ts";
 
 export type Break = { total: number; seat: Seat };
@@ -56,4 +56,13 @@ export function deadWallStacks(
     });
   }
   return deadWall;
+}
+
+export function doraIndicatorSlot(brk: Break): Slot {
+  const deadWall = deadWallStacks(brk);
+  const dora = deadWall.at(2)
+  if (dora === undefined) {
+    throw new Error("Dead wall not built correctly")
+  }
+  return {...dora, layer: "top"};
 }

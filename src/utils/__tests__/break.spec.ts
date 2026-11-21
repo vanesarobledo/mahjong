@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { type Seat } from "@/utils/wall.ts";
-import { computeBreak, deadWallStacks } from "@/utils/break.ts";
+import { allSlots, type Seat } from "@/utils/wall.ts";
+import { computeBreak, deadWallStacks, doraIndicatorSlot } from "@/utils/break.ts";
 
 describe("breaking the wall", () => {
   describe("computeBreak", () => {
@@ -166,5 +166,42 @@ describe("breaking the wall", () => {
         expect(nextWallWrap.length).toBeGreaterThan(sameWall.length);
       });
     });
+  });
+
+  describe("flips the correct dora indicator in the dead wall", () => {
+    it.each<{
+      total: number,
+      seat: Seat,
+      expectedSeat: Seat,
+      expectedStack: number,
+    }>([
+      {
+        total: 8,
+        seat: "North",
+        expectedSeat: "North",
+        expectedStack: 6,
+      },
+      {
+        total: 3,
+        seat: "West",
+        expectedSeat: "West",
+        expectedStack: 1,
+      },
+      {
+        total: 2,
+        seat: "South",
+        expectedSeat: "West",
+        expectedStack: 17,
+      },
+    ])(
+      "flips $expectedSeat stack $expectedStack",
+      ({ total, seat, expectedSeat, expectedStack }) => {
+        const actual = doraIndicatorSlot({ total, seat });
+
+        expect(actual.seat).toBe(expectedSeat);
+        expect(actual.stack).toBe(expectedStack);
+        expect(actual.layer).toBe("top");
+      },
+    );
   });
 });
