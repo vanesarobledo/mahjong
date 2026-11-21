@@ -56,24 +56,27 @@ Source: [Wikipedia — Japanese mahjong](https://en.wikipedia.org/wiki/Japanese_
 4. **New `orientation` field** on `Tile`, typed as the literal union `0 | 90 | 180 | 270`. Each wall's tiles have their bottom edge facing the wall's owner. Separate from `rotationZ`, which keeps meaning "riichi/call rotation".
    - Shuffle and Order reset orientation to `0`.
 5. **Stacks render with the top tile offset upward in _screen_ space** (the viewer's camera), for every wall. Offsetting along each wall's own orientation would make side-wall stacks look like they're leaning sideways.
-6. **Fixed table size derived from constants**, centered horizontally on the board, page scrolls on small screens. Geometry functions return positions relative to the table origin; the composable adds the origin (which depends on board width at runtime). Leave margin around the square for future hand zones; hand zones are not designed here.
+6. **Fixed table size derived from constants**, centered horizontally on the board, page scrolls on small screens. `TABLE_SIZE = 2 × CORNER_GAP + WALL_SIZE × TILE_WIDTH`. `slotPosition` adds `HAND_MARGIN` to both x and y, so the square sits down and to the right of the board's corner, leaving room for future hand zones. This shifts the square; it does not enlarge the board. The composable adds the horizontal centering origin (which depends on board width at runtime). Hand zones are not designed here.
 7. **Randomness stays at the edge.** Pure functions take dice values (and an already-shuffled id order) as arguments. Only the composable calls `Math.random`.
-8. **Code layout:** pure functions in `src/utils/wall.ts`; a `useWall(...)` composable owns dice state, the build sequence, and `buildWall()`. Dependencies (`tiles`, `frontMostTile`, `selection`, `boardRef`) are passed in explicitly, the way `useMarquee` receives its dependencies.
-   - _Why not leave orchestration in `App.vue`:_ `useGroupDrag` stayed state-only and left its logic stranded in `App.vue`; don't repeat that.
+8. **Code layout:** slot geometry and `assignTiles` in `src/utils/wall.ts`; dice, break, and dead wall in `src/utils/break.ts`. A `useWall(...)` composable owns dice state, the build sequence, and `buildWall()`. Dependencies (`tiles`, `frontMostTile`, `selection`, `boardRef`) are passed in explicitly, the way `useMarquee` receives its dependencies.
+9. **The dead wall moves as one rigid piece.** With a break, every dead-wall stack shifts by the same `BREAK_GAP` vector, pointing away from the break along the dice wall's axis. This includes stacks that wrapped onto the next wall: they move along the dice wall's axis too, not along their own wall.
+   - _Why:_ an earlier version shifted each dead-wall stack along its own wall's axis, which pulled the wrapped part around the corner in a different direction from the rest. One vector keeps the 7 stacks visually together as a single dead wall.
 
 ---
 
 ## Constants (in `src/constants.ts`, all tunable)
 
-| Name               | Starting value   | Meaning                                               |
-| ------------------ | ---------------- | ----------------------------------------------------- |
-| `STACK_OFFSET`     | ~8px             | Screen-space upward offset of the top tile in a stack |
-| `BREAK_GAP`        | `TILE_WIDTH / 2` | Gap opened at the break (subject to change once seen) |
-| `CORNER_GAP`       | ≥ `BREAK_GAP`    | Clearance at each corner of the square                |
-| `BUILD_SLIDE_MS`   | 600              | Beat 1: tiles slide into the closed square            |
-| `DICE_REVEAL_MS`   | 400              | Beat 2: "Rolling…" resolves to the result             |
-| `BREAK_MS`         | 400              | Beat 3: gap opens, dora flips                         |
-| `BUILD_STAGGER_MS` | ~5 (optional)    | Per-slot delay so the wall "fills in"                 |
+| Name               | Starting value     | Meaning                                                |
+| ------------------ | ------------------ | ------------------------------------------------------ |
+| `WALL_SIZE`        | 17                 | Stacks per wall                                        |
+| `STACK_OFFSET`     | 8px                | Screen-space upward offset of the top tile in a stack  |
+| `BREAK_GAP`        | `TILE_WIDTH / 2`   | Gap opened at the break (subject to change once seen)  |
+| `CORNER_GAP`       | 80px               | Clearance at each corner of the square (≥ `BREAK_GAP`) |
+| `HAND_MARGIN`      | `TILE_HEIGHT + 80` | Offset of the table square from the board's top-left   |
+| `BUILD_SLIDE_MS`   | 600                | Beat 1: tiles slide into the closed square             |
+| `DICE_REVEAL_MS`   | 400                | Beat 2: "Rolling…" resolves to the result              |
+| `BREAK_MS`         | 400                | Beat 3: gap opens (the dora flips once it finishes)    |
+| `BUILD_STAGGER_MS` | ~5 (optional)      | Per-slot delay so the wall "fills in"                  |
 
 ---
 
@@ -88,7 +91,7 @@ Source: [Wikipedia — Japanese mahjong](https://en.wikipedia.org/wiki/Japanese_
 
 1. **Build** (`BUILD_SLIDE_MS`): all 136 tiles slide from wherever they are into a **closed** 4-wall square (no break gap) and flip face-down.
 2. **Roll** (`DICE_REVEAL_MS`): the toolbar shows "Rolling…", which resolves to e.g. **"Dice: 3 + 5 = 8 → West wall"**.
-3. **Break** (`BREAK_MS`): the break gap opens and the dora indicator flips face-up.
+3. **Break** (`BREAK_MS`): the break gap opens. Once the gap has fully opened, the dora indicator flips face-up, so the break and the reveal read as two separate moments.
 
 The dice line stays visible until the next build.
 
@@ -96,7 +99,7 @@ The dice line stays visible until the next build.
 
 - `useDraggable` positions tiles with inline `left`/`top`. A permanent `transition: left, top` on `.tile` would make every drag lag behind the cursor and make group drag rubber-band (it moves tiles through the same prop → `watch` path).
 - So: `.board` gets a `building` class while the sequence runs, and the `left`/`top` transition is scoped to `.board.building .tile`.
-- While `building`, the board has `pointer-events: none`. A drag started mid-transition would have the tile's position written by both the CSS transition and `useDraggable`. This is a ~1.4s UI lock, not a rules check.
+- While `building`, the board has `pointer-events: none`. A drag started mid-transition would have the tile's position written by both the CSS transition and `useDraggable`. This is a brief UI lock (a second or two, including the dora flip), not a rules check.
 - **`prefers-reduced-motion: reduce`:** skip the slide and gap animation (and the flip transition); jump to the final broken-wall state. The dice text still appears. ([MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion))
 - Timers started by the sequence must be cleaned up if the component unmounts mid-build.
 
@@ -120,6 +123,8 @@ Each phase: write the listed tests first (red), then the code (green), then refa
 **Done.** Vitest is scaffolded: `vitest.config.ts` (merges `vite.config.ts`, so the `@` alias works), `tsconfig.vitest.json`, a `test` script, and a smoke test at `src/utils/__tests__/geometry.spec.ts`. Put new specs in `src/utils/__tests__/` (e.g. `wall.spec.ts`).
 
 ### Phase 1 — Slot geometry (no break)
+
+**Done.** `allSlots`, `seatOrientation`, `slotPosition`, and `orientedRect` live in `src/utils/wall.ts`, with `Seat`, `Orientation`, `Slot`, and `TABLE_SIZE` exported from there. Orientations: East 0, South 270, West 180, North 90. Side-wall (South/North) tiles are shifted by `(TILE_HEIGHT − TILE_WIDTH) / 2` in x and y to cancel the centre-rotation offset, so their rotated footprint lines up with the wall. Tests are in `wall.spec.ts`; they also check that East sits below West and South sits right of North.
 
 Suggested signatures (names are yours to change):
 
@@ -147,8 +152,10 @@ Test cases:
 
 ### Phase 2 — Dice → break → dead wall, and the gap
 
+**Done.** `computeBreak` and `deadWallStacks` live in `src/utils/break.ts`; the gap is applied in `slotPosition(slot, brk)`. `computeBreak` throws if either die is outside 1–6. `deadWallStacks` uses the ring approach: it maps the break onto a 68-stack ring (North +17, West +34, South +51), walks 7 stacks back with `% WALL_SIZE`, and treats a remainder of 0 as stack 17 of the next seat counterclockwise. The gap follows design decision 9 (one rigid shift). Tests are in `break.spec.ts` and `wall.spec.ts`.
+
 ```ts
-type Break = { total: number; seat: Seat; stack: number }
+type Break = { total: number; seat: Seat }   // the break is on the left side of stack `total` on `seat`'s wall
 
 computeBreak(die1: number, die2: number): Break
 deadWallStacks(brk: Break): Array<{ seat: Seat; stack: number }>   // length 7, ordered from the break
@@ -159,13 +166,17 @@ Test cases:
 
 - `computeBreak` maps every total 2–12 to the right seat (a table test with `it.each` fits well).
 - `deadWallStacks` always returns 7 distinct stacks.
-- Total 8 (East): East 8, 7, 6, 5, 4, 3, 2. East stack 1 is _not_ dead.
+- Total 8 (North): North 8, 7, 6, 5, 4, 3, 2. North stack 1 is _not_ dead.
 - Total 12 (North): North 12 → 6, no wrap.
 - Total 3 (West): West 3, 2, 1, then North 17, 16, 15, 14 (wrap).
 - Total 2 (South): South 2, 1, then West 17, 16, 15, 14, 13 (wrap).
+- `computeBreak` throws for dice outside 1–6.
 - With a break: the dead-wall stacks on the dice wall shift `BREAK_GAP` away from the break, toward the corner; every other slot's position is unchanged from Phase 1.
+- With a wrapping break (one per seat: South 2, West 3, North 4, East 5): the dead wall covers both walls and every stack shifts by the same vector.
 
 ### Phase 3 — Assign tiles to slots
+
+**Done.** `assignTiles` lives in `src/utils/wall.ts`. It pairs each id with the slot at the same index in `allSlots()` and throws if it isn't given 136 ids. Tests are in `wall.spec.ts`.
 
 ```ts
 assignTiles(shuffledIds: number[]): Map<number, Slot>   // tile id → slot
@@ -179,28 +190,46 @@ Test cases:
 
 ### Phase 4 — `orientation` on `Tile`, rendering, and `tileToRect`
 
+**Done.** `Tile.orientation` is initialized to `0`, and Shuffle and Order reset it. The `.tile-3d` transform is `rotateZ(orientation) rotateY(flip) rotateZ(riichi)`. `tileToRect` now delegates to `orientedRect`. Tests are in `geometry.spec.ts`: a side-wall tile (orientation 90) gets a swapped footprint, and riichi `rotationZ` is ignored.
+
 - Add `orientation: Orientation` to `Tile`; initialize to `0`; Shuffle and Order reset it.
 - Render it as part of the `.tile-3d` transform alongside `rotateY` (flip) and `rotateZ` (riichi).
 - `tileToRect` uses `orientedRect`, so the marquee hit-tests side-wall tiles correctly. This also resolves the "rotated tiles use the unrotated rect" open item for _orientation_. Riichi `rotationZ` is still ignored.
 
-Test cases: `tileToRect` for each orientation; existing marquee behaviour is unchanged for orientation 0.
+Test cases: `tileToRect` for orientations 0 and 90; existing marquee behaviour is unchanged for orientation 0.
+
+- _Why only 0 and 90:_ `tileToRect` only passes `orientation` through to `orientedRect`, which treats 0/180 as one case and 90/270 as the other. The `orientedRect` tests in `wall.spec.ts` already cover all four orientations, so testing 180 and 270 through `tileToRect` as well would add completeness without covering any new code path.
 
 ### Phase 5 — `useWall` composable, button, dice line, sequence
+
+**Done.** `useWall` lives in `src/composables/useWall.ts` and returns `diceResult`, `phase`, and `buildWall()`. The beats are sequenced with `setTimeout`, wrapped in a `wait(ms)` helper. Timer ids go into a `pendingTimers` set, which `onScopeDispose` clears. Under `prefers-reduced-motion: reduce`, `wait` resolves immediately, and `App.vue` sets the tile slide and `.tile-3d` flip transitions to `0ms`. The table's horizontal origin comes from `boardRef.clientWidth`.
+
+The per-slot stagger is a `transitionDelay` of `i × BUILD_STAGGER_MS` per tile, applied only during `building`. Beat 1 waits `BUILD_SLIDE_MS + 135 × BUILD_STAGGER_MS` so the last tile can land. The slide duration is bound with `v-bind` in CSS (`BUILD_SLIDE_MS` while building, `BREAK_MS` while breaking). The toolbar also shows "Building the wall…" during beat 1. All manual acceptance checks pass.
 
 - `useWall(boardRef, tiles, frontMostTile, selection)` exposes the dice result, the current phase (e.g. `'idle' | 'building' | 'rolling' | 'breaking'`), and `buildWall()`.
 - Only this composable calls `Math.random` (dice and shuffle).
 - Board centering: table origin computed from `boardRef` width.
 
+`phase` is written only by `buildWall()`. The component reads it in three places:
+
+| Consumer          | Reads phase to decide…                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| Toolbar dice line | Show "Rolling…" or the result text                                                     |
+| Build Wall button | `disabled` while a sequence is running                                                 |
+| `.board` class    | Add the `building` class, which turns on the `left`/`top` transition and `pointer-events: none` |
+
 Manual acceptance (browser):
 
-- [ ] Clicking Build Wall from any board state ends in the final state above.
-- [ ] The three beats play in order; total ≈ 1.4s.
-- [ ] Clicks and drags do nothing during the sequence; the button is disabled.
-- [ ] After the sequence, drag is instant again (no lag), and group drag doesn't rubber-band.
-- [ ] With reduced motion on (macOS: System Settings → Accessibility → Display → Reduce motion), the final state appears immediately with the dice line.
-- [ ] Building twice in a row works; the second build uses fresh dice.
+- [x] Clicking Build Wall from any board state ends in the final state above.
+- [x] The three beats play in order, and the dora flips after the gap has finished opening.
+- [x] Clicks and drags do nothing during the sequence; the button is disabled.
+- [x] After the sequence, drag is instant again (no lag), and group drag doesn't rubber-band.
+- [x] With reduced motion on (macOS: System Settings → Accessibility → Display → Reduce motion), the final state appears immediately with the dice line.
+- [x] Building twice in a row works; the second build uses fresh dice.
 
 ### Phase 6 — Dora flip
+
+**In progress.** `doraIndicatorSlot` lives in `src/utils/break.ts`. It takes the third entry of `deadWallStacks` (index 2), adds `layer: 'top'`, and throws if the entry is missing. Its three table tests are in `break.spec.ts`. In `useWall`, `flipDora(slots)` runs after `await wait(BREAK_MS)`, so the dora flips once the gap has opened. It finds the tile by looking up each tile's slot with `slots.get(tile.id)`. The last test case ("exactly one tile is face-up") is not written yet.
 
 ```ts
 doraIndicatorSlot(brk: Break): Slot   // top layer of dead-wall stack 3
@@ -208,7 +237,7 @@ doraIndicatorSlot(brk: Break): Slot   // top layer of dead-wall stack 3
 
 Test cases:
 
-- Total 8 (East) → East stack 6, top.
+- Total 8 (North) → North stack 6, top.
 - Total 3 (West) → West stack 1, top.
 - Total 2 (South) → West stack 17, top (wrapped).
 - After a build, exactly one tile is face-up and it sits in that slot.

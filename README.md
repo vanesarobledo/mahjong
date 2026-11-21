@@ -75,6 +75,7 @@ npm run dev
 ```
 
 ## 🧪 Running tests
+
 Run the unit tests with `npm test` (watch mode) or `npm test -- --run` (single run).
 
 ## 📄 Project docs
