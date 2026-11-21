@@ -126,6 +126,23 @@ export const useWall = (
     placeTiles(slots, xOffset, brk.value);
   }
 
+  function flipDora(slots: Map<number, Slot>) {
+    if (!brk.value) {
+      return;
+    }
+
+    const doraSlot = doraIndicatorSlot(brk.value);
+    tiles.value.find((tile) => {
+      const slot = slots.get(tile.id);
+      if (!slot) throw new Error("Need all 136 tiles");
+
+      if (slot.seat === doraSlot.seat && slot.stack === doraSlot.stack && slot.stack === doraSlot.stack) {
+        tile.isFaceUp = true;
+        tile.rotationY = 0;
+      }
+    });
+  }
+
   async function buildWall() {
     if (phase.value !== "idle") {
       return;
@@ -164,20 +181,10 @@ export const useWall = (
     await wait(BREAK_MS);
 
     // Dora flip
-    const doraSlot = doraIndicatorSlot(brk.value);
-    tiles.value.find((tile) => {
-      const slot = slots.get(tile.id);
-      if (!slot) throw new Error("Need all 136 tiles");
-
-      if (slot.seat === doraSlot.seat && slot.stack === doraSlot.stack) {
-        tile.isFaceUp = true;
-        tile.rotationY = 0;
-      }
-    });
+    flipDora(slots);
 
     phase.value = "idle";
   }
-
 
   return {
     diceResult,
