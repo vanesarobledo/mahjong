@@ -8,3 +8,7 @@ export const STACK_OFFSET = 8;
 export const CORNER_GAP = 80;
 export const HAND_MARGIN = TILE_HEIGHT + 80;
 export const BREAK_GAP = TILE_WIDTH / 2;
+export const BUILD_SLIDE_MS = 600;
+export const DICE_REVEAL_MS = 400;
+export const BREAK_MS = 400;
+export const BUILD_STAGGER_MS = 5;

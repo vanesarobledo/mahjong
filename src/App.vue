@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { type Ref, ref, useTemplateRef } from "vue";
+import { computed, type Ref, ref, useTemplateRef } from "vue";
 import { Tiles } from "@/data/tiles";
 import TileDraggable from "@/components/TileDraggable.vue";
 import type { Tile } from "@/types.ts";
 import { hasMoved, type Point } from "@/utils/geometry.ts";
 import {
+  BREAK_MS,
+  BUILD_SLIDE_MS,
+  BUILD_STAGGER_MS,
   DRAG_THRESHOLD,
   TILE_HEIGHT,
   TILE_PADDING,
@@ -54,6 +57,17 @@ const { diceResult, phase, buildWall } = useWall(
   frontMostTile,
   selection,
 );
+
+const isBuilding = computed(() => phase.value !== "idle");
+const slide_ms = computed(() => {
+  if (phase.value === "building") {
+    return BUILD_SLIDE_MS;
+  }
+  if (phase.value === "breaking") {
+    return BREAK_MS;
+  }
+  return 0;
+});
 
 function getInitializedPosition(index: number) {
   const TILE_SPACING_X = TILE_WIDTH + (TILE_PADDING - 1);
@@ -203,20 +217,14 @@ function updateCoords(tile: Tile, position: Point) {
       <button @click="shuffleTiles">Shuffle Tiles</button>
       <button @click="orderTiles">Order Tiles</button>
       <button @click="selection.reset">Reset Selection</button>
-      <button @click="buildWall" :disabled="phase !== 'idle'">
-        Build the Wall
-      </button>
+      <button @click="buildWall" :disabled="isBuilding">Build the Wall</button>
     </div>
     <div id="message">
-      <span v-if="phase === 'idle'"> Idle. </span>
-      <span v-else-if="phase === 'building'">Building the wall... </span>
-      <span v-else-if="phase === 'rolling'">
-        <span v-if="diceResult.die1 > 0 && diceResult.die2 > 0">
-          {{ diceResult.die1 }} + {{ diceResult.die2 }} = {{ diceResult.total }}
-        </span>
-        <span v-else> Rolling... </span>
+      <span v-if="phase === 'building'">Building the wall... </span>
+      <span v-else-if="phase === 'rolling'"> Rolling...</span>
+      <span v-else-if="diceResult.total > 0">
+        {{ diceResult.die1 }} + {{ diceResult.die2 }} = {{ diceResult.total }} → {{ diceResult.wall }} Wall
       </span>
-      <span v-else>Nothing.</span>
     </div>
   </div>
 
@@ -338,8 +346,10 @@ function updateCoords(tile: Tile, position: Point) {
   border: 2px dashed #ccc;
 }
 
-.building {
-  /* transition */
+.board.building .tile {
+  transition:
+    left v-bind("slide_ms + `px`"),
+    v-bind("slide_ms + `px`");
   pointer-events: none;
 }
 </style>
