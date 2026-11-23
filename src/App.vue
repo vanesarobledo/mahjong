@@ -45,6 +45,11 @@ const dragStartPos: Ref<Point | null> = ref(null);
 const activeDragId: Ref<number | null> = ref(null);
 const groupDragOrigin = ref(new Map<number, Point>());
 
+const draggedId: Ref<number | null> = ref(null);
+function isLifted(tile: Tile) {
+  return tile.id === draggedId.value || groupDragOrigin.value.has(tile.id);
+}
+
 const selection = useSelection();
 const { marquee, rect, handleMouseDown } = useMarquee(
   boardRef,
@@ -107,6 +112,8 @@ function handlePick(tile: Tile) {
     y: tile.y,
   };
 
+  draggedId.value = tile.id;
+
   if (selection.isInGroup(tile.id)) {
     activeDragId.value = tile.id;
 
@@ -162,6 +169,7 @@ function handleTileMove(position: Point, tile: Tile) {
 
 function handleOnEnd(e: MouseEvent, tile: Tile) {
   activeDragId.value = null;
+  draggedId.value = null;
   groupDragOrigin.value = new Map<number, Point>();
 
   if (!e.shiftKey && !selection.isInGroup(tile.id)) {
@@ -259,7 +267,10 @@ function updateCoords(tile: Tile, position: Point) {
       :initial-x="tile.x"
       :initial-y="tile.y"
       :prevent-default="true"
-      :class="{ selected: selection.selectedIds.value.has(tile.id) }"
+      :class="{
+        selected: selection.selectedIds.value.has(tile.id),
+        lifted: isLifted(tile),
+      }"
       :style="{
         zIndex: tile.zIndex,
         transitionDelay:
@@ -341,7 +352,8 @@ h1 {
   color: rgb(244, 239, 231);
 }
 
-#buttons button:disabled, #buttons button:disabled:hover {
+#buttons button:disabled,
+#buttons button:disabled:hover {
   background: #ccc;
 }
 
@@ -426,6 +438,10 @@ h1 {
   border-radius: 3px;
 }
 
+.selected > .face {
+  box-shadow: 2px 2px rgba(0, 0, 0, 0.2);
+}
+
 .marquee {
   position: absolute;
   pointer-events: none;
@@ -437,6 +453,11 @@ h1 {
     left v-bind("slide_ms + `ms`"),
     top v-bind("slide_ms + `ms`");
   pointer-events: none;
+}
+
+.tile.lifted {
+  transition: 200ms;
+  filter: drop-shadow(10px 10px 5px rgba(0, 0, 0, 0.2));
 }
 
 @media (prefers-reduced-motion: reduce) {
