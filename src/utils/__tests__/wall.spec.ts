@@ -633,6 +633,91 @@ describe("building the wall", () => {
     );
   });
 
+  describe("no two tiles in the same layer intersect", () => {
+    const slots = allSlots();
+
+    function collisionsInSlots(slots: Slot[], brk: Break): string[] {
+      let collisions = [];
+      const slotRects = slots.map((slot) => {
+        const slotPos = slotPosition(slot, brk);
+        return {
+          slot,
+          rect: orientedRect(slotPos, slotPos.orientation),
+        };
+      });
+
+      for (const [i, a] of slotRects.entries()) {
+        for (const b of slotRects.slice(i + 1)) {
+          if (rectsIntersect(a.rect, b.rect)) {
+            collisions.push(
+              `${a.slot.layer} ${a.slot.seat} ${a.slot.stack} × ${b.slot.layer} ${b.slot.seat} ${b.slot.stack}`,
+            );
+          }
+        }
+      }
+      return collisions;
+    }
+
+    it.todo("with no break");
+
+    it.each<Break>([
+      {
+        total: 2,
+        seat: "South",
+      },
+      {
+        total: 3,
+        seat: "West",
+      },
+      {
+        total: 4,
+        seat: "North",
+      },
+      {
+        total: 5,
+        seat: "East",
+      },
+      {
+        total: 6,
+        seat: "South",
+      },
+      {
+        total: 7,
+        seat: "West",
+      },
+      {
+        total: 8,
+        seat: "North",
+      },
+      {
+        total: 9,
+        seat: "East",
+      },
+      {
+        total: 10,
+        seat: "South",
+      },
+      {
+        total: 11,
+        seat: "West",
+      },
+      {
+        total: 12,
+        seat: "North",
+      },
+    ])("$seat $total", (brk: Break) => {
+      const topStack = slots.filter((slot) => slot.layer === "top");
+      const bottomStack = slots.filter((slot) => slot.layer === "bottom");
+
+      const collisions = [
+        ...collisionsInSlots(topStack, brk),
+        ...collisionsInSlots(bottomStack, brk),
+      ];
+
+      expect(collisions).toEqual([]);
+    });
+  });
+
   describe("assignTiles", () => {
     const TOTAL_TILES = 136;
     const ids = Array.from({ length: TOTAL_TILES }, (_, i) => i + 1);
@@ -664,24 +749,30 @@ describe("building the wall", () => {
         stack: 1,
         layer: "top",
       };
-      const expectedId = ids[slots.findIndex(
-        (s) =>
-          s.seat === doraSlot.seat &&
-          s.stack === doraSlot.stack &&
-          s.layer === doraSlot.layer,
-      )];
+      const expectedId =
+        ids[
+          slots.findIndex(
+            (s) =>
+              s.seat === doraSlot.seat &&
+              s.stack === doraSlot.stack &&
+              s.layer === doraSlot.layer,
+          )
+        ];
 
       // Same slot, different layer
       const otherSlot: Slot = {
         ...doraSlot,
         layer: "bottom",
       };
-      const otherExpectedId = ids[slots.findIndex(
-        (s) =>
-          s.seat === otherSlot.seat &&
-          s.stack === otherSlot.stack &&
-          s.layer === otherSlot.layer,
-      )];
+      const otherExpectedId =
+        ids[
+          slots.findIndex(
+            (s) =>
+              s.seat === otherSlot.seat &&
+              s.stack === otherSlot.stack &&
+              s.layer === otherSlot.layer,
+          )
+        ];
 
       const nonExistentSlot: Slot = {
         seat: "West",
