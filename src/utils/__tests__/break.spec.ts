@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { allSlots, type Seat } from "@/utils/wall.ts";
-import { computeBreak, deadWallStacks, doraIndicatorSlot } from "@/utils/break.ts";
+import {
+  type Break,
+  computeBreak,
+  deadWallStacks,
+  doraIndicatorSlot,
+} from "@/utils/break.ts";
+import { BREAK_GAP } from "@/constants.ts";
 
 describe("breaking the wall", () => {
   describe("computeBreak", () => {
@@ -83,17 +89,19 @@ describe("breaking the wall", () => {
       expect(wallBreak.seat).toBe(seat);
     });
 
-    it.each<{ die1: number; die2: number }>([
+    it.each<{ range: string; die1: number; die2: number }>([
       {
+        range: "below",
         die1: -1,
         die2: 1,
       },
       {
+        range: "above",
         die1: 1,
         die2: 8,
       },
     ])(
-      "throws an error when dice inputs are out of range",
+      "throws an error when dice inputs are $range the range",
       ({ die1, die2 }) => {
         expect(() => {
           computeBreak(die1, die2);
@@ -112,6 +120,71 @@ describe("breaking the wall", () => {
 
       expect(deadWall.length).toEqual(7);
       expect(new Set(keys).size).toEqual(deadWall.length);
+    });
+
+    it.each<{ brk: Break; expected: Array<{ seat: Seat; stack: number }> }>([
+      {
+        brk: {
+          seat: "South",
+          total: 2,
+        },
+        expected: [
+          { seat: "South", stack: 2 },
+          { seat: "South", stack: 1 },
+          { seat: "West", stack: 17 },
+          { seat: "West", stack: 16 },
+          { seat: "West", stack: 15 },
+          { seat: "West", stack: 14 },
+          { seat: "West", stack: 13 },
+        ],
+      },
+      {
+        brk: {
+          seat: "West",
+          total: 3,
+        },
+        expected: [
+          { seat: "West", stack: 3 },
+          { seat: "West", stack: 2 },
+          { seat: "West", stack: 1 },
+          { seat: "North", stack: 17 },
+          { seat: "North", stack: 16 },
+          { seat: "North", stack: 15 },
+          { seat: "North", stack: 14 },
+        ],
+      },
+      {
+        brk: {
+          seat: "North",
+          total: 4,
+        },
+        expected: [
+          { seat: "North", stack: 4 },
+          { seat: "North", stack: 3 },
+          { seat: "North", stack: 2 },
+          { seat: "North", stack: 1 },
+          { seat: "East", stack: 17 },
+          { seat: "East", stack: 16 },
+          { seat: "East", stack: 15 },
+        ],
+      },
+      {
+        brk: {
+          seat: "East",
+          total: 5,
+        },
+        expected: [
+          { seat: "East", stack: 5 },
+          { seat: "East", stack: 4 },
+          { seat: "East", stack: 3 },
+          { seat: "East", stack: 2 },
+          { seat: "East", stack: 1 },
+          { seat: "South", stack: 17 },
+          { seat: "South", stack: 16 },
+        ],
+      },
+    ])("dead wall for $brk.seat $brk.total", ({ brk, expected }) => {
+      expect(deadWallStacks(brk)).toEqual(expected);
     });
 
     describe("when the dead wall fits on the dice wall", () => {
@@ -170,10 +243,10 @@ describe("breaking the wall", () => {
 
   describe("flips the correct dora indicator in the dead wall", () => {
     it.each<{
-      total: number,
-      seat: Seat,
-      expectedSeat: Seat,
-      expectedStack: number,
+      total: number;
+      seat: Seat;
+      expectedSeat: Seat;
+      expectedStack: number;
     }>([
       {
         total: 8,
