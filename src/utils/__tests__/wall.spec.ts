@@ -9,6 +9,7 @@ import {
   type Slot,
   slotPosition,
   TABLE_SIZE,
+  tileInSlot,
 } from "@/utils/wall.ts";
 import {
   BREAK_GAP,
@@ -20,7 +21,11 @@ import {
   WALL_SIZE,
 } from "@/constants.ts";
 import { type Rect, rectsIntersect } from "@/utils/geometry.ts";
-import { type Break, deadWallStacks } from "@/utils/break.ts";
+import {
+  type Break,
+  deadWallStacks,
+  doraIndicatorSlot,
+} from "@/utils/break.ts";
 
 describe("building the wall", () => {
   function wallSlots(seat: Seat): Slot[] {
@@ -648,6 +653,58 @@ describe("building the wall", () => {
       expect(() => {
         assignTiles(Array.from({ length: TOTAL_TILES + 1 }, (_, i) => i + 1));
       }).toThrow("Length of shuffled IDs must be 136");
+    });
+
+    it("returns only one Dora indicator", () => {
+      const slots = allSlots();
+      const tilesToSlots = assignTiles(ids);
+
+      const doraSlot: Slot = {
+        seat: "West",
+        stack: 1,
+        layer: "top",
+      };
+      const expectedId = ids[slots.findIndex(
+        (s) =>
+          s.seat === doraSlot.seat &&
+          s.stack === doraSlot.stack &&
+          s.layer === doraSlot.layer,
+      )];
+
+      // Same slot, different layer
+      const otherSlot: Slot = {
+        ...doraSlot,
+        layer: "bottom",
+      };
+      const otherExpectedId = ids[slots.findIndex(
+        (s) =>
+          s.seat === otherSlot.seat &&
+          s.stack === otherSlot.stack &&
+          s.layer === otherSlot.layer,
+      )];
+
+      const nonExistentSlot: Slot = {
+        seat: "West",
+        stack: 18,
+        layer: "top",
+      };
+      const expectedNonExistentSlotId =
+        ids[
+          slots.findIndex(
+            (s) =>
+              s.seat === nonExistentSlot.seat &&
+              s.stack === nonExistentSlot.stack &&
+              s.layer === nonExistentSlot.layer,
+          )
+        ];
+
+      const doraTileId = tileInSlot(tilesToSlots, doraSlot);
+      const otherSlotId = tileInSlot(tilesToSlots, otherSlot);
+      const nonExistentSlotId = tileInSlot(tilesToSlots, nonExistentSlot);
+
+      expect(doraTileId).toBe(expectedId);
+      expect(otherSlotId).toBe(otherExpectedId);
+      expect(nonExistentSlotId).toBe(expectedNonExistentSlotId);
     });
   });
 });

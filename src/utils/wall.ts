@@ -143,3 +143,16 @@ export function assignTiles(shuffledIds: number[]): Map<number, Slot> {
 
   return new Map(wallSlots.map((slot, index) => [shuffledIds[index]!, slot]));
 }
+
+function sameSlot(a: Slot, b: Slot): boolean {
+  return a.seat === b.seat && a.stack === b.stack && a.layer === b.layer;
+}
+
+export function tileInSlot(assignment: Map<number, Slot>, slot: Slot): number | undefined {
+  for (const [id, assignedSlot] of assignment) {
+    if (sameSlot(assignedSlot, slot)) {
+      return id;
+    }
+  }
+  return undefined;
+}
