@@ -433,7 +433,7 @@ h1 {
 }
 
 .selected > .tile-3d {
-  outline: 3px rgb(244, 232, 66) solid;
+  outline: 3px rgba(0, 0, 0, 0.6) solid;
   outline-offset: -1px;
   border-radius: 3px;
 }
