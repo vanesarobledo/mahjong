@@ -21,11 +21,7 @@ import {
   WALL_SIZE,
 } from "@/constants.ts";
 import { type Rect, rectsIntersect } from "@/utils/geometry.ts";
-import {
-  type Break,
-  deadWallStacks,
-  doraIndicatorSlot,
-} from "@/utils/break.ts";
+import { type Break, deadWallStacks } from "@/utils/break.ts";
 
 describe("building the wall", () => {
   function wallSlots(seat: Seat): Slot[] {
@@ -486,6 +482,73 @@ describe("building the wall", () => {
         ).toBe(base["y"]);
       }
     });
+
+    it.each<{
+      brk: Break;
+      shift: { x: number; y: number };
+      expectedWrapped: Array<{ seat: Seat; stack: number }>;
+    }>([
+      {
+        brk: { seat: "South", total: 2 },
+        shift: { x: BREAK_GAP, y: 0 },
+        expectedWrapped: [
+          { seat: "West", stack: 13 },
+          { seat: "West", stack: 14 },
+          { seat: "West", stack: 15 },
+          { seat: "West", stack: 16 },
+          { seat: "West", stack: 17 },
+        ],
+      },
+      {
+        brk: { seat: "West", total: 3 },
+        shift: { x: 0, y: -BREAK_GAP },
+        expectedWrapped: [
+          { seat: "North", stack: 14 },
+          { seat: "North", stack: 15 },
+          { seat: "North", stack: 16 },
+          { seat: "North", stack: 17 },
+        ],
+      },
+      {
+        brk: { seat: "North", total: 4 },
+        shift: { x: -BREAK_GAP, y: 0 },
+        expectedWrapped: [
+          { seat: "East", stack: 15 },
+          { seat: "East", stack: 16 },
+          { seat: "East", stack: 17 },
+        ],
+      },
+      {
+        brk: { seat: "East", total: 5 },
+        shift: { x: 0, y: BREAK_GAP },
+        expectedWrapped: [
+          { seat: "South", stack: 16 },
+          { seat: "South", stack: 17 },
+        ],
+      },
+    ])(
+      "wrapped dead-wall stacks from a $brk.seat $brk.total break slide toward their own corner",
+      ({ brk, shift, expectedWrapped }) => {
+        const pairs = allSlots()
+          .filter((slot) => isInStacks(slot, expectedWrapped))
+          .map((slot) => ({
+            slot,
+            base: slotPosition(slot),
+            brk: slotPosition(slot, brk),
+          }));
+
+        for (const { slot, base, brk } of pairs) {
+          expect(
+            brk["x"],
+            `${slot.seat} ${slot.stack} ${slot.layer} x-axis`,
+          ).toBe(base["x"] + shift.x);
+          expect(
+            brk["y"],
+            `${slot.seat} ${slot.stack} ${slot.layer} y-axis`,
+          ).toBe(base["y"] + shift.y);
+        }
+      },
+    );
   });
 
   describe("no two tiles in the same layer intersect", () => {
