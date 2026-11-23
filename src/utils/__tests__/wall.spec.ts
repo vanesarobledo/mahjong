@@ -636,7 +636,7 @@ describe("building the wall", () => {
   describe("no two tiles in the same layer intersect", () => {
     const slots = allSlots();
 
-    function collisionsInSlots(slots: Slot[], brk: Break): string[] {
+    function collisionsInSlots(slots: Slot[], brk?: Break): string[] {
       let collisions = [];
       const slotRects = slots.map((slot) => {
         const slotPos = slotPosition(slot, brk);
@@ -658,7 +658,17 @@ describe("building the wall", () => {
       return collisions;
     }
 
-    it.todo("with no break");
+    it("with no break", () => {
+      const topStack = slots.filter((slot) => slot.layer === "top");
+      const bottomStack = slots.filter((slot) => slot.layer === "bottom");
+
+      const collisions = [
+        ...collisionsInSlots(topStack),
+        ...collisionsInSlots(bottomStack),
+      ];
+
+      expect(collisions).toEqual([]);
+    });
 
     it.each<Break>([
       {
