@@ -210,7 +210,9 @@ function updateCoords(tile: Tile, position: Point) {
 </script>
 
 <template>
-  <h1>Mahjong</h1>
+  <header>
+    <h1>Mahjong</h1>
+  </header>
 
   <div id="toolbar">
     <div id="buttons">
@@ -284,15 +286,63 @@ function updateCoords(tile: Tile, position: Point) {
   </div>
 </template>
 
-<style scoped>
+<style>
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Nunito Sans Variable", sans-serif;
+  background: rgb(116, 183, 117);
+}
+
+header {
+  text-align: center;
+  margin: 0;
+  padding: 0.5em;
+  background: #111;
+  color: rgb(244, 239, 231);
+}
+
+h1 {
+  font-family: "Playfair Display Variable", serif;
+  font-weight: 400;
+  font-style: normal;
+  font-size: 2em;
+  text-transform: uppercase;
+}
+
 #toolbar {
   display: flex;
   gap: 2em;
+  margin: 1em 0;
+  padding: 1em;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  color: rgb(244, 239, 231);
 }
 
 #buttons {
   display: flex;
-  gap: 0.5em;
+  gap: 1em;
+}
+
+#buttons button {
+  background: rgb(244, 239, 231);
+  font-family: "Playfair Display Variable", serif;
+  border: 0;
+  padding: 1em;
+  border-radius: 6px;
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, 0.6),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.2);
+}
+
+#buttons button:hover {
+  background: #000;
+  color: rgb(244, 239, 231);
+}
+
+#buttons button:disabled, #buttons button:disabled:hover {
+  background: #ccc;
 }
 
 .board {
@@ -315,7 +365,7 @@ function updateCoords(tile: Tile, position: Point) {
   cursor: pointer;
   border-radius: 6px;
   box-shadow:
-    0 4px 0 rgb(235, 75, 66),
+    0 4px 0 rgb(255, 215, 0),
     0 6px 6px rgba(0, 0, 0, 0.35);
 }
 
@@ -366,12 +416,12 @@ function updateCoords(tile: Tile, position: Point) {
 }
 
 .back {
-  background-image: url("/img/tiles/Back.svg");
+  background: rgb(255, 215, 0);
   transform: rotateY(180deg);
 }
 
 .selected > .tile-3d {
-  outline: 3px rgb(255, 215, 0) solid;
+  outline: 3px rgb(244, 232, 66) solid;
   outline-offset: -1px;
   border-radius: 3px;
 }
