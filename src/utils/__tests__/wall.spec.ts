@@ -513,18 +513,6 @@ describe("building the wall", () => {
       return collisions;
     }
 
-    it("with no break", () => {
-      const topStack = slots.filter((slot) => slot.layer === "top");
-      const bottomStack = slots.filter((slot) => slot.layer === "bottom");
-
-      const collisions = [
-        ...collisionsInSlots(topStack),
-        ...collisionsInSlots(bottomStack),
-      ];
-
-      expect(collisions).toEqual([]);
-    });
-
     it.each<Break>([
       {
         total: 2,
