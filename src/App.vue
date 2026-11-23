@@ -313,16 +313,22 @@ function updateCoords(tile: Tile, position: Point) {
   transform-style: preserve-3d;
   transition: transform 0.4s;
   cursor: pointer;
+  border-radius: 6px;
+  box-shadow:
+    0 4px 0 rgb(235, 75, 66),
+    0 6px 6px rgba(0, 0, 0, 0.35);
 }
 
 .face {
   position: absolute;
   inset: 0;
-  border-radius: 4px;
+  border-radius: 6px;
   background: center / auto no-repeat;
   backface-visibility: hidden;
   padding: v-bind("TILE_PADDING + `px`");
-  box-shadow: inset 1px 1px 1px 1px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, 0.6),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.2);
 }
 
 .front {
@@ -332,6 +338,31 @@ function updateCoords(tile: Tile, position: Point) {
 .front img {
   width: 100%;
   height: 100%;
+}
+
+.front::after,
+.back::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.front::after {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.5),
+    transparent 45%
+  );
+}
+
+.back::after {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.4),
+    transparent 45%
+  );
+  mix-blend-mode: soft-light;
 }
 
 .back {
@@ -348,7 +379,7 @@ function updateCoords(tile: Tile, position: Point) {
 .marquee {
   position: absolute;
   pointer-events: none;
-  border: 2px dashed #ccc;
+  border: 2px dashed #bbb;
 }
 
 .board.building .tile {
