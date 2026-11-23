@@ -44,7 +44,7 @@ describe("building the wall", () => {
     ]);
   }
 
-  function isInDeadWall(
+  function isInStacks(
     slot: Slot,
     deadWall: Array<{ seat: Seat; stack: number }>,
   ): boolean {
@@ -348,7 +348,7 @@ describe("building the wall", () => {
     });
   });
 
-  describe("the dead-wall stacks on the dice wall shift BREAK_GAP away from the break, toward the corner", () => {
+  describe("the live-wall stacks on the dice wall shift BREAK_GAP away from the dead wall", () => {
     it.each<{ brk: Break; expected: Array<{ seat: Seat; stack: number }> }>([
       {
         brk: {
@@ -418,7 +418,7 @@ describe("building the wall", () => {
       brk: Break;
       axis: "x" | "y";
       offset: number;
-      expectedDeadWall: Array<{ seat: Seat; stack: number }>;
+      expectedLiveSide: Array<{ seat: Seat; stack: number }>;
     }>([
       {
         brk: {
@@ -426,15 +426,13 @@ describe("building the wall", () => {
           total: 12,
         },
         axis: "y",
-        offset: BREAK_GAP,
-        expectedDeadWall: [
-          { seat: "North", stack: 12 },
-          { seat: "North", stack: 11 },
-          { seat: "North", stack: 10 },
-          { seat: "North", stack: 9 },
-          { seat: "North", stack: 8 },
-          { seat: "North", stack: 7 },
-          { seat: "North", stack: 6 },
+        offset: -BREAK_GAP,
+        expectedLiveSide: [
+          { seat: "North", stack: 13 },
+          { seat: "North", stack: 14 },
+          { seat: "North", stack: 15 },
+          { seat: "North", stack: 16 },
+          { seat: "North", stack: 17 },
         ],
       },
       {
@@ -443,15 +441,16 @@ describe("building the wall", () => {
           total: 9,
         },
         axis: "x",
-        offset: BREAK_GAP,
-        expectedDeadWall: [
-          { seat: "East", stack: 9 },
-          { seat: "East", stack: 8 },
-          { seat: "East", stack: 7 },
-          { seat: "East", stack: 6 },
-          { seat: "East", stack: 5 },
-          { seat: "East", stack: 4 },
-          { seat: "East", stack: 3 },
+        offset: -BREAK_GAP,
+        expectedLiveSide: [
+          { seat: "East", stack: 10 },
+          { seat: "East", stack: 11 },
+          { seat: "East", stack: 12 },
+          { seat: "East", stack: 13 },
+          { seat: "East", stack: 14 },
+          { seat: "East", stack: 15 },
+          { seat: "East", stack: 16 },
+          { seat: "East", stack: 17 },
         ],
       },
       {
@@ -460,15 +459,15 @@ describe("building the wall", () => {
           total: 10,
         },
         axis: "y",
-        offset: -BREAK_GAP,
-        expectedDeadWall: [
-          { seat: "South", stack: 10 },
-          { seat: "South", stack: 9 },
-          { seat: "South", stack: 8 },
-          { seat: "South", stack: 7 },
-          { seat: "South", stack: 6 },
-          { seat: "South", stack: 5 },
-          { seat: "South", stack: 4 },
+        offset: BREAK_GAP,
+        expectedLiveSide: [
+          { seat: "South", stack: 11 },
+          { seat: "South", stack: 12 },
+          { seat: "South", stack: 13 },
+          { seat: "South", stack: 14 },
+          { seat: "South", stack: 15 },
+          { seat: "South", stack: 16 },
+          { seat: "South", stack: 17 },
         ],
       },
       {
@@ -477,24 +476,23 @@ describe("building the wall", () => {
           total: 11,
         },
         axis: "x",
-        offset: -BREAK_GAP,
-        expectedDeadWall: [
-          { seat: "West", stack: 11 },
-          { seat: "West", stack: 10 },
-          { seat: "West", stack: 9 },
-          { seat: "West", stack: 8 },
-          { seat: "West", stack: 7 },
-          { seat: "West", stack: 6 },
-          { seat: "West", stack: 5 },
+        offset: BREAK_GAP,
+        expectedLiveSide: [
+          { seat: "West", stack: 12 },
+          { seat: "West", stack: 13 },
+          { seat: "West", stack: 14 },
+          { seat: "West", stack: 15 },
+          { seat: "West", stack: 16 },
+          { seat: "West", stack: 17 },
         ],
       },
     ])(
-      "when dead wall stack is all on the $brk.seat wall",
-      ({ brk, axis, offset, expectedDeadWall }) => {
+      "live side of a $brk.seat $brk.total break shifts along the dice wall's axis",
+      ({ brk, axis, offset, expectedLiveSide }) => {
         const otherAxis = axis === "x" ? "y" : "x";
 
         const pairs = allSlots()
-          .filter((slot) => isInDeadWall(slot, expectedDeadWall))
+          .filter((slot) => isInStacks(slot, expectedLiveSide))
           .map((slot) => ({
             slot,
             base: slotPosition(slot),
@@ -531,11 +529,11 @@ describe("building the wall", () => {
         seat: "West",
         total: 11,
       },
-    ])("stacks outside the dead wall don't move", (brk) => {
+    ])("the dead wall alongside $seat doesn't move", (brk) => {
       const expectedDeadWall = deadWallStacks(brk);
 
       const pairs = allSlots()
-        .filter((slot) => !isInDeadWall(slot, expectedDeadWall))
+        .filter((slot) => isInStacks(slot, expectedDeadWall))
         .map((slot) => ({
           slot,
           base: slotPosition(slot),
@@ -553,84 +551,6 @@ describe("building the wall", () => {
         ).toBe(base["y"]);
       }
     });
-
-    it.each<{
-      brk: Break;
-      shift: { x: number; y: number };
-      expectedDeadWall: Array<{ seat: Seat; stack: number }>;
-    }>([
-      {
-        brk: { seat: "South", total: 2 },
-        shift: { x: 0, y: -BREAK_GAP },
-        expectedDeadWall: [
-          { seat: "South", stack: 2 },
-          { seat: "South", stack: 1 },
-          { seat: "West", stack: 17 },
-          { seat: "West", stack: 16 },
-          { seat: "West", stack: 15 },
-          { seat: "West", stack: 14 },
-          { seat: "West", stack: 13 },
-        ],
-      },
-      {
-        brk: { seat: "West", total: 3 },
-        shift: { x: -BREAK_GAP, y: 0 },
-        expectedDeadWall: [
-          { seat: "West", stack: 3 },
-          { seat: "West", stack: 2 },
-          { seat: "West", stack: 1 },
-          { seat: "North", stack: 17 },
-          { seat: "North", stack: 16 },
-          { seat: "North", stack: 15 },
-          { seat: "North", stack: 14 },
-        ],
-      },
-      {
-        brk: { seat: "North", total: 4 },
-        shift: { x: 0, y: +BREAK_GAP },
-        expectedDeadWall: [
-          { seat: "North", stack: 4 },
-          { seat: "North", stack: 3 },
-          { seat: "North", stack: 2 },
-          { seat: "North", stack: 1 },
-          { seat: "East", stack: 17 },
-          { seat: "East", stack: 16 },
-          { seat: "East", stack: 15 },
-        ],
-      },
-      {
-        brk: { seat: "East", total: 5 },
-        shift: { x: BREAK_GAP, y: 0 },
-        expectedDeadWall: [
-          { seat: "East", stack: 5 },
-          { seat: "East", stack: 4 },
-          { seat: "East", stack: 3 },
-          { seat: "East", stack: 2 },
-          { seat: "East", stack: 1 },
-          { seat: "South", stack: 17 },
-          { seat: "South", stack: 16 },
-        ],
-      },
-    ])(
-      "dead wall from a $brk.seat break at $brk.total shifts as one piece",
-      ({ brk, shift, expectedDeadWall }) => {
-        const pairs = allSlots()
-          .filter((slot) => isInDeadWall(slot, expectedDeadWall))
-          .map((slot) => ({
-            slot,
-            base: slotPosition(slot),
-            shifted: slotPosition(slot, brk),
-          }));
-
-        expect(pairs.length).toBe(14);
-
-        for (const { slot, base, shifted } of pairs) {
-          const label = `${slot.seat} ${slot.stack} ${slot.layer}`;
-          expect(shifted.x, label).toBe(base.x + shift.x);
-          expect(shifted.y, label).toBe(base.y + shift.y);
-        }
-      },
-    );
   });
 
   describe("no two tiles in the same layer intersect", () => {
