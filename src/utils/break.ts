@@ -60,9 +60,9 @@ export function deadWallStacks(
 
 export function doraIndicatorSlot(brk: Break): Slot {
   const deadWall = deadWallStacks(brk);
-  const dora = deadWall.at(2)
+  const dora = deadWall.at(2);
   if (dora === undefined) {
-    throw new Error("Dead wall not built correctly")
+    throw new Error("Dead wall not built correctly");
   }
-  return {...dora, layer: "top"};
+  return { ...dora, layer: "top" };
 }

@@ -1,11 +1,17 @@
-import {onScopeDispose, ref, type Ref, type ShallowRef} from "vue";
-import type {Tile} from "@/types.ts";
-import {shuffle} from "@/utils/shuffle.ts";
-import {type Break, computeBreak, doraIndicatorSlot} from "@/utils/break.ts";
-import {assignTiles, type Seat, type Slot, slotPosition, TABLE_SIZE,} from "@/utils/wall.ts";
-import type {useSelection} from "@/composables/useSelection.ts";
-import {bringToFront} from "@/utils/tileActions.ts";
-import {Tiles} from "@/data/tiles.ts";
+import { onScopeDispose, ref, type Ref, type ShallowRef } from "vue";
+import type { Tile } from "@/types.ts";
+import { shuffle } from "@/utils/shuffle.ts";
+import { type Break, computeBreak, doraIndicatorSlot } from "@/utils/break.ts";
+import {
+  assignTiles,
+  type Seat,
+  type Slot,
+  slotPosition,
+  TABLE_SIZE,
+} from "@/utils/wall.ts";
+import type { useSelection } from "@/composables/useSelection.ts";
+import { bringToFront } from "@/utils/tileActions.ts";
+import { Tiles } from "@/data/tiles.ts";
 import {
   BREAK_MS,
   BUILD_SLIDE_MS,
@@ -136,7 +142,11 @@ export const useWall = (
       const slot = slots.get(tile.id);
       if (!slot) throw new Error("Need all 136 tiles");
 
-      if (slot.seat === doraSlot.seat && slot.stack === doraSlot.stack && slot.layer === doraSlot.layer) {
+      if (
+        slot.seat === doraSlot.seat &&
+        slot.stack === doraSlot.stack &&
+        slot.layer === doraSlot.layer
+      ) {
         tile.isFaceUp = true;
         tile.rotationY = 0;
       }

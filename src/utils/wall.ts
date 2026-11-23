@@ -8,7 +8,7 @@ import {
   TILE_WIDTH,
   WALL_SIZE,
 } from "@/constants.ts";
-import  { type Break, deadWallStacks } from "@/utils/break.ts";
+import { type Break, deadWallStacks } from "@/utils/break.ts";
 
 const SEATS = ["East", "South", "West", "North"] as const;
 
@@ -58,15 +58,16 @@ export function seatOrientation(seat: Seat): Orientation {
 }
 
 function vector(seat: Seat): Point {
-  let x = 0, y = 0;
+  let x = 0,
+    y = 0;
   if (seat === "East") x -= BREAK_GAP;
   if (seat === "South") y += BREAK_GAP;
   if (seat === "West") x += BREAK_GAP;
   if (seat === "North") y -= BREAK_GAP;
   return {
     x,
-    y
-  }
+    y,
+  };
 }
 
 export function slotPosition(
@@ -112,8 +113,10 @@ export function slotPosition(
     if (slot.seat === brk.seat && slot.stack > brk.total) {
       slotX += vector(slot.seat).x;
       slotY += vector(slot.seat).y;
-    }
-    else if ((deadWall.find((s) => slot.stack === s.stack && slot.seat === s.seat)) && slot.seat !== brk.seat) {
+    } else if (
+      deadWall.find((s) => slot.stack === s.stack && slot.seat === s.seat) &&
+      slot.seat !== brk.seat
+    ) {
       slotX += vector(slot.seat).x;
       slotY += vector(slot.seat).y;
     }
@@ -162,7 +165,10 @@ function sameSlot(a: Slot, b: Slot): boolean {
   return a.seat === b.seat && a.stack === b.stack && a.layer === b.layer;
 }
 
-export function tileInSlot(assignment: Map<number, Slot>, slot: Slot): number | undefined {
+export function tileInSlot(
+  assignment: Map<number, Slot>,
+  slot: Slot,
+): number | undefined {
   for (const [id, assignedSlot] of assignment) {
     if (sameSlot(assignedSlot, slot)) {
       return id;

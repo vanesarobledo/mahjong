@@ -1,4 +1,4 @@
-import type {Tile} from "@/types.ts";
+import type { Tile } from "@/types.ts";
 import type { Ref } from "vue";
 
 export function flipTile(tile: Tile) {
