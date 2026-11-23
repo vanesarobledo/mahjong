@@ -59,8 +59,9 @@ Source: [Wikipedia — Japanese mahjong](https://en.wikipedia.org/wiki/Japanese_
 6. **Fixed table size derived from constants**, centered horizontally on the board, page scrolls on small screens. `TABLE_SIZE = 2 × CORNER_GAP + WALL_SIZE × TILE_WIDTH`. `slotPosition` adds `HAND_MARGIN` to both x and y, so the square sits down and to the right of the board's corner, leaving room for future hand zones. This shifts the square; it does not enlarge the board. The composable adds the horizontal centering origin (which depends on board width at runtime). Hand zones are not designed here.
 7. **Randomness stays at the edge.** Pure functions take dice values (and an already-shuffled id order) as arguments. Only the composable calls `Math.random`.
 8. **Code layout:** slot geometry and `assignTiles` in `src/utils/wall.ts`; dice, break, and dead wall in `src/utils/break.ts`. A `useWall(...)` composable owns dice state, the build sequence, and `buildWall()`. Dependencies (`tiles`, `frontMostTile`, `selection`, `boardRef`) are passed in explicitly, the way `useMarquee` receives its dependencies.
-9. **The live side of the break moves; the dead wall stays put.** With a break, the dice wall's stacks `total + 1` to 17 shift `BREAK_GAP` away from the break, along the dice wall's axis, toward their own corner. Stack 17 moves into the `CORNER_GAP` clearance, which is why `CORNER_GAP ≥ BREAK_GAP`. The dead wall and every other wall stay where they are, including any dead-wall stacks that wrapped onto the next wall.
-   - _Why:_ two earlier versions moved the dead wall instead. The first shifted each dead-wall stack along its own wall's axis, which pulled the wrapped part around the corner in a different direction from the rest. The second moved all 7 stacks by one vector toward the corner, but when the break didn't wrap and the total was 8–12, the far end of the dead wall slid `BREAK_GAP` into the live stacks between it and the corner (stacks 1 to `total − 7`). Moving the live side opens the same gap without either problem: nothing slides toward a stack that stays still, and a wrapping dead wall needs no special case.
+9. **The live side of the break moves; the dead wall stays put unless it wrapped.** With a break, the dice wall's stacks `total + 1` to 17 shift `BREAK_GAP` away from the break, along the dice wall's axis, toward their own corner. If the dead wall wrapped (total < 7), its stacks on the next wall also shift `BREAK_GAP` toward _that_ wall's corner (its stack-17 end), along that wall's own axis. Both moves use the same per-seat "toward stack 17" vector, picked by the slot's seat. Each stack 17 that moves goes into the `CORNER_GAP` clearance, which is why `CORNER_GAP ≥ BREAK_GAP`. Everything else stays put: the part of the dead wall on the dice wall, and every other stack.
+   - _Why:_ two earlier versions moved the dead wall instead. The first shifted each dead-wall stack along its own wall's axis, toward that wall's stack 1. On the dice wall that's the corner end, but on the next wall it points away from the corner, so a wrapped dead wall's stacks slid into that wall's live stacks. The second moved all 7 stacks by the dice wall's vector toward the corner. That fixed the wrapped case, but when the break didn't wrap and the total was 8–12, the far end of the dead wall slid `BREAK_GAP` into the live stacks between it and the corner (stacks 1 to `total − 7`). The first version had this overlap too, since its dice-wall part moved the same way. Moving the live side instead opens the gap at the break without colliding with anything. That left a wrapped dead wall sitting flush against the live stacks on the next wall, so its wrapped stacks also shift. They move along their own wall's axis like the first version, but toward stack 17 (the corner) instead of stack 1, which opens a gap at the dead wall's far end.
+   - _Not covered:_ when the break doesn't wrap (totals 8–12), the dead wall's far end still touches live stacks 1 to `total − 7`. Only wrapped dead walls get a far-end gap.
 
 ---
 
@@ -152,7 +153,7 @@ Test cases:
 
 ### Phase 2 — Dice → break → dead wall, and the gap
 
-**Done.** `computeBreak` and `deadWallStacks` live in `src/utils/break.ts`; the gap is applied in `slotPosition(slot, brk)`. `computeBreak` throws if either die is outside 1–6. `deadWallStacks` uses the ring approach: it maps the break onto a 68-stack ring (North +17, West +34, South +51), walks 7 stacks back with `% WALL_SIZE`, and treats a remainder of 0 as stack 17 of the next seat counterclockwise. The gap follows design decision 9: `slotPosition` shifts dice-wall stacks above `total`, so it no longer needs `deadWallStacks`. Tests are in `break.spec.ts` and `wall.spec.ts`.
+**Done.** `computeBreak` and `deadWallStacks` live in `src/utils/break.ts`; the gap is applied in `slotPosition(slot, brk)`. `computeBreak` throws if either die is outside 1–6. `deadWallStacks` uses the ring approach: it maps the break onto a 68-stack ring (North +17, West +34, South +51), walks 7 stacks back with `% WALL_SIZE`, and treats a remainder of 0 as stack 17 of the next seat counterclockwise. The gap follows design decision 9: `slotPosition` shifts dice-wall stacks above `total`, plus the dead-wall stacks (from `deadWallStacks`) that aren't on the dice wall, each by its own seat's toward-stack-17 vector. Tests are in `break.spec.ts` and `wall.spec.ts`.
 
 ```ts
 type Break = { total: number; seat: Seat }   // the break is on the left side of stack `total` on `seat`'s wall
@@ -171,7 +172,9 @@ Test cases:
 - Total 3 (West): West 3, 2, 1, then North 17, 16, 15, 14 (wrap).
 - Total 2 (South): South 2, 1, then West 17, 16, 15, 14, 13 (wrap).
 - `computeBreak` throws for dice outside 1–6.
-- With a break: the dice wall's stacks above `total` shift `BREAK_GAP` away from the break, along the dice wall's axis; every other slot's position, including the whole dead wall, is unchanged from Phase 1.
+- With a break: the dice wall's stacks above `total` shift `BREAK_GAP` away from the break, along the dice wall's axis.
+- With a wrapping break (one per seat: South 2, West 3, North 4, East 5): the dead-wall stacks on the next wall shift `BREAK_GAP` toward that wall's stack-17 corner (South 2 → West 13–17, x + gap).
+- The dead-wall stacks on the dice wall don't move. That covers the whole dead wall when the break doesn't wrap, and the part left on the dice wall when it does.
 - For every break the dice can produce (one per total, 2–12) and for the unbroken wall: no two tiles in the same layer intersect (`orientedRect` + `rectsIntersect`). Same-layer only, because a stack's top and bottom tiles overlap on purpose (`STACK_OFFSET`).
 
 ### Phase 3 — Assign tiles to slots
@@ -212,10 +215,10 @@ The per-slot stagger is a `transitionDelay` of `i × BUILD_STAGGER_MS` per tile,
 
 `phase` is written only by `buildWall()`. The component reads it in three places:
 
-| Consumer          | Reads phase to decide…                                                                 |
-| ----------------- | -------------------------------------------------------------------------------------- |
-| Toolbar dice line | Show "Rolling…" or the result text                                                     |
-| Build Wall button | `disabled` while a sequence is running                                                 |
+| Consumer          | Reads phase to decide…                                                                          |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| Toolbar dice line | Show "Rolling…" or the result text                                                              |
+| Build Wall button | `disabled` while a sequence is running                                                          |
 | `.board` class    | Add the `building` class, which turns on the `left`/`top` transition and `pointer-events: none` |
 
 Manual acceptance (browser):
