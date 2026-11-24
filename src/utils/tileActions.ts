@@ -8,7 +8,7 @@ export function flipTile(tile: Tile) {
 }
 
 export function rotateTile(tile: Tile) {
-  tile.orientation = (tile.orientation + 90) % 360 as Orientation;
+  tile.orientation = ((tile.orientation + 90) % 360) as Orientation;
 }
 
 export function bringToFront(tile: Tile, frontMostTile: Ref<number>) {

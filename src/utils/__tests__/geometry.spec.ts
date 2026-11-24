@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { rectsIntersect, tileToRect } from "@/utils/geometry.ts";
 import { type Orientation } from "@/utils/wall.ts";
 import type { Tile } from "@/types.ts";
-import { TILE_HEIGHT, TILE_WIDTH } from "@/constants.ts";
 
 // Smoke test: proves Vitest runs, TypeScript compiles, and the "@" alias resolves.
 describe("rectsIntersect", () => {
