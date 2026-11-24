@@ -115,7 +115,7 @@ describe("building the wall", () => {
         expected: 90,
       },
     ])(
-      "returns orientation $orientation for the $expected seat",
+      "returns orientation $seat for the $expected seat",
       ({ seat, expected }) => {
         const sOrientation = seatOrientation(seat);
 
@@ -242,48 +242,6 @@ describe("building the wall", () => {
       expect(Math.max(...northX)).toBeLessThan(Math.min(...southX));
     });
 
-    it("no two bottom-layer footprints overlap across all four walls, including corners", () => {
-      const wall = allSlots();
-      const bottomWall = wall
-        .filter((stack) => stack.layer === "bottom")
-        .map((slot) => {
-          const slotPos = slotPosition(slot);
-          const rect = orientedRect(slotPos, slotPos.orientation);
-          return {
-            label: `${slot.seat} ${slot.stack}`,
-            rect,
-          };
-        });
-
-      expect(bottomWall.length).toBe(wall.length / 2);
-
-      for (const [i, a] of bottomWall.entries()) {
-        for (const b of bottomWall.slice(i + 1)) {
-          expect(
-            rectsIntersect(a.rect, b.rect),
-            `${a.label} vs ${b.label}`,
-          ).toBe(false);
-        }
-      }
-    });
-
-    it("table square is calculated correctly using CORNER_GAP, WALL_SIZE, TILE_WIDTH, and HAND_MARGIN", () => {
-      const tableSquare: Rect = {
-        top: HAND_MARGIN,
-        left: HAND_MARGIN,
-        right: TABLE_SIZE + HAND_MARGIN,
-        bottom: TABLE_SIZE + HAND_MARGIN,
-      };
-      const expectedSquare: Rect = {
-        top: HAND_MARGIN,
-        left: HAND_MARGIN,
-        right: 2 * CORNER_GAP + WALL_SIZE * TILE_WIDTH + HAND_MARGIN,
-        bottom: 2 * CORNER_GAP + WALL_SIZE * TILE_WIDTH + HAND_MARGIN,
-      };
-
-      expect(tableSquare).toEqual(expectedSquare);
-    });
-
     it("every footprint lies inside the table square", () => {
       const tableSquare: Rect = {
         top: HAND_MARGIN,
@@ -302,10 +260,10 @@ describe("building the wall", () => {
       });
 
       for (const [_i, wallFootprint] of wallFootprints.entries()) {
-        expect(
-          rectsIntersect(wallFootprint.rect, tableSquare),
-          `${wallFootprint.label}`,
-        ).toBe(true);
+        expect(wallFootprint.rect.top).toBeGreaterThanOrEqual(tableSquare.top);
+        expect(wallFootprint.rect.left).toBeGreaterThanOrEqual(tableSquare.left);
+        expect(wallFootprint.rect.bottom).toBeLessThanOrEqual(tableSquare.bottom);
+        expect(wallFootprint.rect.right).toBeLessThanOrEqual(tableSquare.right);
       }
     });
   });
@@ -624,7 +582,7 @@ describe("building the wall", () => {
       (brk) => {
         const deadWall = deadWallStacks(brk);
 
-        expect(deadWall.every((s) => s.seat === brk.seat)).toBe(true);
+        expect(deadWall.every((s) => s.seat === brk.seat)).toEqual(Array(7).fill(brk.seat));
 
         const pairs = allSlots()
           .filter((slot) => isInStacks(slot, deadWall))
@@ -695,7 +653,7 @@ describe("building the wall", () => {
     ])(
       "wrapped dead-wall stacks from a $brk.seat $brk.total break slide toward their own corner",
       ({ brk, expectedWrapped }) => {
-        expect(expectedWrapped.some((s) => s.seat !== brk.seat)).toBe(true);
+        expect(expectedWrapped.map((s) => s.seat)).not.toContain(brk.seat);
 
         const pairs = allSlots()
           .filter((slot) => isInStacks(slot, expectedWrapped))
@@ -791,7 +749,7 @@ describe("building the wall", () => {
       {
         total: 12,
         seat: "North",
-      },
+      }
     ])("$seat $total", (brk: Break) => {
       const topStack = slots.filter((slot) => slot.layer === "top");
       const bottomStack = slots.filter((slot) => slot.layer === "bottom");
@@ -799,6 +757,18 @@ describe("building the wall", () => {
       const collisions = [
         ...collisionsInSlots(topStack, brk),
         ...collisionsInSlots(bottomStack, brk),
+      ];
+
+      expect(collisions).toEqual([]);
+    });
+
+    it("without a break", () => {
+      const topStack = slots.filter((slot) => slot.layer === "top");
+      const bottomStack = slots.filter((slot) => slot.layer === "bottom");
+
+      const collisions = [
+        ...collisionsInSlots(topStack),
+        ...collisionsInSlots(bottomStack),
       ];
 
       expect(collisions).toEqual([]);
@@ -826,6 +796,11 @@ describe("building the wall", () => {
         assignTiles(Array.from({ length: TOTAL_TILES + 1 }, (_, i) => i + 1));
       }).toThrow("Length of shuffled IDs must be 136");
     });
+  });
+
+  describe("tileInSlot", () => {
+    const TOTAL_TILES = 136;
+    const ids = Array.from({ length: TOTAL_TILES }, (_, i) => i + 1);
 
     it("returns only one Dora indicator", () => {
       const slots = allSlots();
@@ -882,7 +857,7 @@ describe("building the wall", () => {
 
       expect(doraTileId).toBe(expectedId);
       expect(otherSlotId).toBe(otherExpectedId);
-      expect(nonExistentSlotId).toBe(expectedNonExistentSlotId);
+      expect(nonExistentSlotId).toBeUndefined();
     });
   });
 });

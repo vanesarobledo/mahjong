@@ -14,7 +14,7 @@ describe("rectsIntersect", () => {
   });
 });
 
-describe("tilesToRect", () => {
+describe("tileToRect", () => {
   const tile: Tile = {
     id: 1,
     src: "",
@@ -33,8 +33,6 @@ describe("tilesToRect", () => {
     const orientation: Orientation = 90;
     const currentTile = { ...tile, ...pos, orientation };
     const expected = { top: 211, left: 89, bottom: 261, right: 161 };
-
-    console.log(expected);
 
     const tileRect = tileToRect(currentTile);
 

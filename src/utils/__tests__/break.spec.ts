@@ -207,8 +207,7 @@ describe("breaking the wall", () => {
           return s.seat;
         });
 
-        // TODO: Find better assertion?
-        expect(new Set(deadWallSeats).size).toBe(1);
+        expect(new Set(deadWallSeats)).toEqual(new Set(["North"]));
       });
     });
 
@@ -241,7 +240,7 @@ describe("breaking the wall", () => {
     });
   });
 
-  describe("flips the correct dora indicator in the dead wall", () => {
+  describe("flips the correct Dora indicator in the dead wall", () => {
     it.each<{
       total: number;
       seat: Seat;
