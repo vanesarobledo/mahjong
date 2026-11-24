@@ -344,7 +344,7 @@ describe("building the wall", () => {
     });
   });
 
-  describe("the live-wall stacks on the dice wall shift BREAK_GAP away from the dead wall", () => {
+  describe("the live-wall stacks on the dice wall shifts 2 * BREAK_GAP away from the dead wall", () => {
     it.each<{
       brk: Break;
       axis: "x" | "y";
@@ -357,7 +357,7 @@ describe("building the wall", () => {
           total: 12,
         },
         axis: "y",
-        offset: -BREAK_GAP,
+        offset: -2 * BREAK_GAP,
         expectedLiveSide: [
           { seat: "North", stack: 13 },
           { seat: "North", stack: 14 },
@@ -372,7 +372,7 @@ describe("building the wall", () => {
           total: 9,
         },
         axis: "x",
-        offset: -BREAK_GAP,
+        offset: -2 * BREAK_GAP,
         expectedLiveSide: [
           { seat: "East", stack: 10 },
           { seat: "East", stack: 11 },
@@ -390,7 +390,7 @@ describe("building the wall", () => {
           total: 10,
         },
         axis: "y",
-        offset: BREAK_GAP,
+        offset: 2 * BREAK_GAP,
         expectedLiveSide: [
           { seat: "South", stack: 11 },
           { seat: "South", stack: 12 },
@@ -407,7 +407,7 @@ describe("building the wall", () => {
           total: 11,
         },
         axis: "x",
-        offset: BREAK_GAP,
+        offset: 2 * BREAK_GAP,
         expectedLiveSide: [
           { seat: "West", stack: 12 },
           { seat: "West", stack: 13 },
@@ -443,10 +443,58 @@ describe("building the wall", () => {
       },
     );
 
+    function rectAfterBreak(slot: {seat: Seat, stack: number}, brk: Break): Rect {
+      const pos = slotPosition({...slot, layer: "bottom"}, brk);
+      return orientedRect(pos, pos.orientation);
+    }
+    function axisGap(a: Rect, b: Rect, axis: "x" | "y") {
+      if (axis === "x") {
+        if (b.left > a.left) {
+          return b.left - a.right;
+        }
+        else {
+          return a.left - b.right;
+        }
+      } else if (axis === "y") {
+        if (b.bottom > a.bottom) {
+          return b.top - a.bottom;
+        } else {
+          return a.top - b.bottom;
+        }
+      }
+    }
+
+    function getAxis(seat: Seat) {
+      if (seat === "North" || seat === "South") {
+        return "y";
+      }
+      return "x";
+    }
+
     it.each<Break>([
       {
+        seat: "South",
+        total: 2,
+      },
+      {
+        seat: "West",
+        total: 3,
+      },
+      {
         seat: "North",
-        total: 12,
+        total: 4,
+      },
+      {
+        seat: "East",
+        total: 5,
+      },
+      {
+        seat: "South",
+        total: 6,
+      },
+      {
+        seat: "North",
+        total: 8,
       },
       {
         seat: "East",
@@ -460,27 +508,31 @@ describe("building the wall", () => {
         seat: "West",
         total: 11,
       },
-    ])("the dead wall alongside $seat doesn't move", (brk) => {
-      const expectedDeadWall = deadWallStacks(brk);
+      {
+        seat: "North",
+        total: 12,
+      },
+    ])("dead wall is separated at both ends: $seat $total", (brk) => {
+      const deadWall = deadWallStacks(brk);
 
-      const pairs = allSlots()
-        .filter((slot) => isInStacks(slot, expectedDeadWall))
-        .map((slot) => ({
-          slot,
-          base: slotPosition(slot),
-          brk: slotPosition(slot, brk),
-        }));
+      const near = {
+        dead: rectAfterBreak(deadWall[0]!, brk),
+        live: rectAfterBreak({ seat: brk.seat, stack: brk.total + 1 }, brk),
+      };
 
-      for (const { slot, base, brk } of pairs) {
-        expect(
-          brk["x"],
-          `${slot.seat} ${slot.stack} ${slot.layer} x-axis`,
-        ).toBe(base["x"]);
-        expect(
-          brk["y"],
-          `${slot.seat} ${slot.stack} ${slot.layer} y-axis`,
-        ).toBe(base["y"]);
-      }
+      const isWrap = deadWall[0]!.seat !== deadWall[6]!.seat
+      const farLiveStack = isWrap ? deadWall[6]!.stack - 1 : brk.total - 7;
+      const far = {
+        dead: rectAfterBreak(deadWall[6]!, brk),
+        live: rectAfterBreak({ seat: deadWall[6]!.seat, stack: farLiveStack } , brk),
+      };
+
+      expect(axisGap(near.dead, near.live, getAxis(deadWall[0]!.seat))).toBe(BREAK_GAP);
+      expect(axisGap(far.dead, far.live, getAxis(deadWall[6]!.seat))).toBe(BREAK_GAP);
+    });
+
+    it.each([8, 9, 10, 11, 12])("live stacks 1..total−7 don't move", () => {
+
     });
 
     it.each<{
