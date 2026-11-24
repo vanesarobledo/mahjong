@@ -443,6 +443,41 @@ describe("building the wall", () => {
       },
     );
 
+    it.each<Break>([
+      { seat: "North", total: 8 },
+      { seat: "East", total: 9 },
+      { seat: "South", total: 10 },
+      { seat: "West", total: 11 },
+      { seat: "North", total: 12 },
+    ])(
+      "live stacks past the far end of a $seat $total break don't move",
+      (brk) => {
+        const farLive = Array.from({ length: brk.total - 7 }, (_, i) => ({
+          seat: brk.seat,
+          stack: i + 1,
+        }));
+
+        const pairs = allSlots()
+          .filter((slot) => isInStacks(slot, farLive))
+          .map((slot) => ({
+            slot,
+            base: slotPosition(slot),
+            brk: slotPosition(slot, brk),
+          }));
+
+        expect(pairs).toHaveLength(farLive.length * 2);
+
+        for (const { slot, base, brk } of pairs) {
+          expect(
+            brk,
+            `${slot.seat} ${slot.stack} ${slot.layer} x-axis`,
+          ).toEqual(base);
+        }
+      },
+    );
+  });
+
+  describe("the dead-wall stacks shift", () => {
     function rectAfterBreak(
       slot: { seat: Seat; stack: number },
       brk: Break,
@@ -457,7 +492,7 @@ describe("building the wall", () => {
         } else {
           return a.left - b.right;
         }
-      } else if (axis === "y") {
+      } else {
         if (b.bottom > a.bottom) {
           return b.top - a.bottom;
         } else {
@@ -522,12 +557,10 @@ describe("building the wall", () => {
         live: rectAfterBreak({ seat: brk.seat, stack: brk.total + 1 }, brk),
       };
 
-      const isWrap = deadWall[0]!.seat !== deadWall[6]!.seat;
-      const farLiveStack = isWrap ? deadWall[6]!.stack - 1 : brk.total - 7;
       const far = {
         dead: rectAfterBreak(deadWall[6]!, brk),
         live: rectAfterBreak(
-          { seat: deadWall[6]!.seat, stack: farLiveStack },
+          { seat: deadWall[6]!.seat, stack: deadWall[6]!.stack - 1 },
           brk,
         ),
       };
@@ -601,6 +634,8 @@ describe("building the wall", () => {
             shifted: slotPosition(slot, brk),
           }));
 
+        expect(pairs).toHaveLength(14);
+
         for (const { slot, base, shifted } of pairs) {
           const expected = TOWARD_STACK_17[slot.seat];
           expect(
@@ -660,6 +695,8 @@ describe("building the wall", () => {
     ])(
       "wrapped dead-wall stacks from a $brk.seat $brk.total break slide toward their own corner",
       ({ brk, expectedWrapped }) => {
+        expect(expectedWrapped.some((s) => s.seat !== brk.seat)).toBe(true);
+
         const pairs = allSlots()
           .filter((slot) => isInStacks(slot, expectedWrapped))
           .map((slot) => ({
@@ -668,7 +705,7 @@ describe("building the wall", () => {
             brk: slotPosition(slot, brk),
           }));
 
-        expect(expectedWrapped.some((s) => s.seat !== brk.seat)).toBe(true);
+        expect(pairs).toHaveLength(expectedWrapped.length * 2);
 
         for (const { slot, base, brk } of pairs) {
           const expected = TOWARD_STACK_17[slot.seat];
@@ -683,8 +720,6 @@ describe("building the wall", () => {
         }
       },
     );
-
-    it.each([8, 9, 10, 11, 12])("live stacks 1..total−7 don't move", () => {});
   });
 
   describe("no two tiles in the same layer intersect", () => {
