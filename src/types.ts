@@ -5,7 +5,6 @@ export type Tile = {
   src: string;
   name: string;
   rotationY: number;
-  rotationZ: number;
   orientation: Orientation;
   isFaceUp: boolean;
   x: number;

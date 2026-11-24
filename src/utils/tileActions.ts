@@ -1,5 +1,6 @@
 import type { Tile } from "@/types.ts";
 import type { Ref } from "vue";
+import type { Orientation } from "@/utils/wall.ts";
 
 export function flipTile(tile: Tile) {
   tile.isFaceUp = !tile.isFaceUp;
@@ -7,7 +8,7 @@ export function flipTile(tile: Tile) {
 }
 
 export function rotateTile(tile: Tile) {
-  tile.rotationZ = tile.rotationZ === 0 ? 90 : 0;
+  tile.orientation = ((tile.orientation + 90) % 360) as Orientation;
 }
 
 export function bringToFront(tile: Tile, frontMostTile: Ref<number>) {

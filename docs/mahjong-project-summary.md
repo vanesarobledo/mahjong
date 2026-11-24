@@ -19,7 +19,7 @@ Scope is split into two tiers below: **Near-term** (setup/bookkeeping helpers, b
 - **Hand zones**: four labeled per-seat regions. Dealing into them can optionally be automated (a "deal" helper draws starting tiles from the wall into each hand), but manual drag-to-fill remains fully supported — dealing is a convenience.
 - **Swap mode**: a dedicated cheat gesture — click "swap," then click two tiles — exchanges their positions/identities in one step, on top of the free drag-anywhere that already works today.
 - **Seat / round indicators**: labels players manually set/cycle themselves (e.g. click to advance E→S→W→N, or bump the round by hand). No app-driven turn logic drives them.
-- **Riichi tracking**: a per-seat "in Riichi" flag plus a running count of riichi sticks in the pot, layered on top of the existing rotate-discard-90° gesture that already marks a riichi discard.
+- **Riichi tracking**: a per-seat "in Riichi" flag plus a running count of riichi sticks in the pot. Players set it themselves, like placing a riichi stick at a physical table. It is never inferred from tile rotation: turning a discard sideways is only a visual marker, and sideways tiles also mark called tiles in melds.
 
 ### Stretch / future scope
 
@@ -46,8 +46,8 @@ type TileData = { id: number; src: string; name: string };
 - 4 copies of each honour tile (Ton, Nan, Shaa, Pei, Hatsu, Chun, Haku)
 - Ordered: Man → Pin → Sou → Ton → Nan → Shaa → Pei → Hatsu → Chun → Haku
 - `name` is the filename without extension (e.g. `Man5-Dora`)
-- This is purely descriptive data — **no position, rotation, or game state lives here**. Runtime state is added to each tile object at mount time in the parent's `ref()`, producing the `Tile` type (`src/types.ts`): `TileData` + `x`, `y`, `zIndex`, `isFaceUp`, `rotationY`, `rotationZ`, `orientation`.
-- `orientation` (`0 | 90 | 180 | 270`) is which way the tile faces on the table: wall tiles have their bottom edge toward the wall's owner. It's separate from `rotationZ`, which keeps meaning "riichi/call rotation". Shuffle and Order reset it to `0`.
+- This is purely descriptive data — **no position, rotation, or game state lives here**. Runtime state is added to each tile object at mount time in the parent's `ref()`, producing the `Tile` type (`src/types.ts`): `TileData` + `x`, `y`, `zIndex`, `isFaceUp`, `rotationY`, `orientation`.
+- `orientation` (`0 | 90 | 180 | 270`) is which way the tile faces on the table. The wall build sets it so each wall's tiles have their bottom edge toward the wall's owner, and right-click turns it a further 90° clockwise (`(orientation + 90) % 360`). Shuffle and Order reset it to `0`. It is the only in-plane rotation a tile has; see decision 6.
 
 ## Source layout
 
@@ -112,13 +112,15 @@ src/
    - The parent updates `tile.x`/`tile.y` (after a Fisher-Yates shuffle of the array + randomizing coordinates); the child watches `[() => props.initialX, () => props.initialY]` and imperatively sets the composable's internal `position.value` when they change. Chosen deliberately over the "bump a key to force remount" alternative, for learning purposes (understanding `watch`'s explicit source-tracking model, in contrast to React's `useEffect`).
    - The watch early-returns when the incoming value already equals the composable's current `x`/`y`. Without that guard, every drag frame round-trips (child emits `move` → parent writes `tile.x` → prop changes → watch writes the same value back into `position`). It converges immediately, but it's a redundant write per frame.
 
-6. **Orientation, flip (`rotateY`), and riichi-call rotation (`rotateZ`) are composed in one `transform` string** on `.tile-3d`: `rotateZ(orientation) rotateY(flip) rotateZ(riichi)`. They coexist safely because `transform-style: preserve-3d` is set on the tile wrapper.
-   - _Order matters:_ transform functions apply right to left in the element's local frame ([MDN: transform](https://developer.mozilla.org/en-US/docs/Web/CSS/transform)). Orientation goes first (outermost) so a side-wall tile flips and riichi-rotates relative to its own facing.
+6. **Orientation and flip (`rotateY`) are composed in one `transform` string** on `.tile-3d`: `rotateZ(orientation) rotateY(flip)`. They coexist safely because `transform-style: preserve-3d` is set on the tile wrapper.
+   - _Order matters:_ transform functions apply right to left in the element's local frame ([MDN: transform](https://developer.mozilla.org/en-US/docs/Web/CSS/transform)). Orientation goes first (outermost) so a tile flips relative to its own facing.
+   - _One rotation field, not two._ An earlier version had a separate `rotationZ` for a riichi/call turn on top of `orientation`. Once right-click could turn a tile in every direction, the two fields meant the same thing ("which way does this tile face"), so they were merged into `orientation`. Hit-testing then covers player-rotated tiles for free.
+   - _Rotation doesn't encode game state._ It doesn't mark riichi (that's a per-seat flag; see Near-term scope), and it doesn't say which seat a tile belongs to. Seat ownership will come from position (which seat's hand zone a tile sits in), for the same reason as the slot model in decision 15: cheating moves tiles between seats, and anything stored apart from position goes stale.
 
 7. **Interaction model, to avoid gesture collisions:**
    - Single click → flip face up/down (skipped if the pointer moved more than `DRAG_THRESHOLD` px since pick, so finishing a drag doesn't flip the tile)
    - Shift+click → toggle the tile in/out of the selection (no flip)
-   - Right-click (`@contextmenu.prevent`) → rotate 90° for riichi calls
+   - Right-click (`@contextmenu.prevent`) → rotate 90° clockwise (repeated clicks cycle through all four directions)
    - Pointerdown on a tile (drag start) → bring tile to front; if it's part of a multi-tile selection, start a group drag
    - Mousedown on empty board + drag → marquee box select; shift held at mousedown makes it additive
    - Click on empty board (no shift) → clear selection; there's also a "Reset Selection" button
@@ -151,7 +153,7 @@ src/
     - Pointer coords are converted to board space with `clientToBoard` (`clientX − board.getBoundingClientRect().left`), matching the coordinate space of `tile.x`/`tile.y`.
     - The box is normalized into a `Rect` via `computed` (min/max of start and current), so dragging up/left works.
     - Hit-test: `rectsIntersect(tileToRect(tile), rect)`. Overlap is strict: rectangles whose edges only touch do **not** intersect (`!(b.left >= a.right) && !(b.right <= a.left)`, same for y), so a marquee that grazes a tile's edge doesn't select it. Tiles hidden under other tiles are selected too; that's consistent with "automate, don't judge."
-    - **Hit-testing follows `orientation` but not riichi rotation.** `tileToRect` delegates to `orientedRect`, which swaps width and height around the tile's centre for orientations 90/270, so side-wall tiles hit-test correctly. It still ignores `rotationZ`, so grazing the long side of a riichi-rotated tile can miss or over-select slightly. Chosen as "ignore it until it bothers someone".
+    - **Hit-testing follows `orientation`.** `tileToRect` delegates to `orientedRect`, which swaps width and height around the tile's centre for orientations 90/270, so sideways tiles hit-test correctly, whether the wall build or a right-click turned them.
     - The marquee renders at `zIndex: frontMostTile + 1` with `pointer-events: none`, so it draws above every tile without intercepting events.
 
 13. **Wall slot model: geometry is a pure function, and tile positions stay the source of truth.**
@@ -172,7 +174,7 @@ src/
     - `.board.building` also sets `pointer-events: none`, so a drag can't fight the CSS transition for a tile's position. This is a brief UI lock during an automated action, not a rules check.
     - Under `prefers-reduced-motion: reduce`, `wait` resolves immediately and CSS sets the slide and flip transitions to `0ms` ([MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion)).
 
-17. **A build resets the table.** All 136 tiles are shuffled and placed regardless of where they were; face, `rotationZ`, orientation, zIndex, and selection are reset. Bottom-layer tiles get `zIndex: 0`; top-layer tiles go through `bringToFront` after `frontMostTile` resets to 136, so tops always draw over bottoms. Same-layer tiles never overlap (covered by collision tests for every total), so no screen-y ordering is needed.
+17. **A build resets the table.** All 136 tiles are shuffled and placed regardless of where they were; face, orientation, zIndex, and selection are reset. Bottom-layer tiles get `zIndex: 0`; top-layer tiles go through `bringToFront` after `frontMostTile` resets to 136, so tops always draw over bottoms. Same-layer tiles never overlap (covered by collision tests for every total), so no screen-y ordering is needed.
 
 18. **Dragged tiles get a `lifted` class** (larger drop shadow). `isLifted(tile)` is true for the tile being dragged (`draggedId`, set in `handlePick`, cleared in `handleOnEnd`) and for the other tiles in a group drag (`groupDragOrigin`).
 

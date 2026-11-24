@@ -95,7 +95,6 @@ export const useWall = (
 
       tile.isFaceUp = false;
       tile.rotationY = 180;
-      tile.rotationZ = 0;
       tile.zIndex = 0;
 
       if (slot.layer === "top") {
