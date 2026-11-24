@@ -242,13 +242,14 @@ describe("building the wall", () => {
       expect(Math.max(...northX)).toBeLessThan(Math.min(...southX));
     });
 
-    it("every footprint lies inside the table square", () => {
+    describe("table square", () => {
       const tableSquare: Rect = {
         top: HAND_MARGIN,
         left: HAND_MARGIN,
         right: TABLE_SIZE + HAND_MARGIN,
         bottom: TABLE_SIZE + HAND_MARGIN,
       };
+
       const wall = allSlots();
       const wallFootprints = wall.map((slot) => {
         const slotPos = slotPosition(slot);
@@ -259,13 +260,38 @@ describe("building the wall", () => {
         };
       });
 
-      for (const [_i, wallFootprint] of wallFootprints.entries()) {
-        expect(wallFootprint.rect.top).toBeGreaterThanOrEqual(tableSquare.top);
-        expect(wallFootprint.rect.left).toBeGreaterThanOrEqual(tableSquare.left);
-        expect(wallFootprint.rect.bottom).toBeLessThanOrEqual(tableSquare.bottom);
-        expect(wallFootprint.rect.right).toBeLessThanOrEqual(tableSquare.right);
-      }
+      it("every footprint lies inside the table square", () => {
+        for (const [_i, wallFootprint] of wallFootprints.entries()) {
+          expect(wallFootprint.rect.top, `${wallFootprint.label} top`).toBeGreaterThanOrEqual(
+            tableSquare.top,
+          );
+          expect(
+            wallFootprint.rect.left,
+            `${wallFootprint.label} left`,
+          ).toBeGreaterThanOrEqual(tableSquare.left);
+          expect(
+            wallFootprint.rect.bottom,
+            `${wallFootprint.label} bottom`,
+          ).toBeLessThanOrEqual(tableSquare.bottom);
+          expect(
+            wallFootprint.rect.right,
+            `${wallFootprint.label} right`,
+          ).toBeLessThanOrEqual(tableSquare.right);
+        }
+      });
+
+      it("the walls fill the table square edge to edge", () => {
+        const boundingBox: Rect = {
+          top: Math.min(...wallFootprints.map((f) => f.rect.top)),
+          left: Math.min(...wallFootprints.map((f) => f.rect.left)),
+          bottom: Math.max(...wallFootprints.map((f) => f.rect.bottom)),
+          right: Math.max(...wallFootprints.map((f) => f.rect.right)),
+        };
+
+        expect(boundingBox).toEqual(tableSquare);
+      });
     });
+
   });
 
   describe("orientedRect", () => {
@@ -531,6 +557,7 @@ describe("building the wall", () => {
       );
     });
 
+    // West 7 is a separate check - far end is stack 1, which has no neighbour
     it("dead wall is separated from live wall end: West 7", () => {
       const brk: Break = { total: 7, seat: "West" };
       const deadWall = deadWallStacks(brk);

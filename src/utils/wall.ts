@@ -81,7 +81,7 @@ export function slotPosition(
 
   if (slot.seat === "East") {
     slotX = CORNER_GAP + (WALL_SIZE - slot.stack) * TILE_WIDTH;
-    slotY = TABLE_SIZE - TILE_HEIGHT;
+    slotY = TABLE_SIZE - TILE_HEIGHT - STACK_OFFSET;
   }
 
   if (slot.seat === "South") {
