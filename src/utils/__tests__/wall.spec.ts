@@ -13,7 +13,6 @@ import {
 } from "@/utils/wall.ts";
 import {
   BREAK_GAP,
-  CORNER_GAP,
   HAND_MARGIN,
   STACK_OFFSET,
   TILE_HEIGHT,
@@ -115,7 +114,7 @@ describe("building the wall", () => {
         expected: 90,
       },
     ])(
-      "returns orientation $seat for the $expected seat",
+      "returns orientation $expected for the $seat seat",
       ({ seat, expected }) => {
         const sOrientation = seatOrientation(seat);
 
@@ -262,9 +261,10 @@ describe("building the wall", () => {
 
       it("every footprint lies inside the table square", () => {
         for (const [_i, wallFootprint] of wallFootprints.entries()) {
-          expect(wallFootprint.rect.top, `${wallFootprint.label} top`).toBeGreaterThanOrEqual(
-            tableSquare.top,
-          );
+          expect(
+            wallFootprint.rect.top,
+            `${wallFootprint.label} top`,
+          ).toBeGreaterThanOrEqual(tableSquare.top);
           expect(
             wallFootprint.rect.left,
             `${wallFootprint.label} left`,
@@ -291,7 +291,6 @@ describe("building the wall", () => {
         expect(boundingBox).toEqual(tableSquare);
       });
     });
-
   });
 
   describe("orientedRect", () => {
@@ -609,7 +608,7 @@ describe("building the wall", () => {
       (brk) => {
         const deadWall = deadWallStacks(brk);
 
-        expect(deadWall.every((s) => s.seat === brk.seat)).toEqual(Array(7).fill(brk.seat));
+        expect(deadWall.map((s) => s.seat)).toEqual(Array(7).fill(brk.seat));
 
         const pairs = allSlots()
           .filter((slot) => isInStacks(slot, deadWall))
@@ -776,7 +775,7 @@ describe("building the wall", () => {
       {
         total: 12,
         seat: "North",
-      }
+      },
     ])("$seat $total", (brk: Break) => {
       const topStack = slots.filter((slot) => slot.layer === "top");
       const bottomStack = slots.filter((slot) => slot.layer === "bottom");
@@ -802,10 +801,10 @@ describe("building the wall", () => {
     });
   });
 
-  describe("assignTiles", () => {
-    const TOTAL_TILES = 136;
-    const ids = Array.from({ length: TOTAL_TILES }, (_, i) => i + 1);
+  const TOTAL_TILES = 136;
+  const ids = Array.from({ length: TOTAL_TILES }, (_, i) => i + 1);
 
+  describe("assignTiles", () => {
     it("the same id order gives the same assignment", () => {
       const slots = allSlots();
       const differentIds = [...ids].reverse();
@@ -826,10 +825,7 @@ describe("building the wall", () => {
   });
 
   describe("tileInSlot", () => {
-    const TOTAL_TILES = 136;
-    const ids = Array.from({ length: TOTAL_TILES }, (_, i) => i + 1);
-
-    it("returns only one Dora indicator", () => {
+    it("returns the correct tile ID given a slot, a different ID with the same stack but different layer, and undefined for invalid stack", () => {
       const slots = allSlots();
       const tilesToSlots = assignTiles(ids);
 
@@ -868,15 +864,6 @@ describe("building the wall", () => {
         stack: 18,
         layer: "top",
       };
-      const expectedNonExistentSlotId =
-        ids[
-          slots.findIndex(
-            (s) =>
-              s.seat === nonExistentSlot.seat &&
-              s.stack === nonExistentSlot.stack &&
-              s.layer === nonExistentSlot.layer,
-          )
-        ];
 
       const doraTileId = tileInSlot(tilesToSlots, doraSlot);
       const otherSlotId = tileInSlot(tilesToSlots, otherSlot);
