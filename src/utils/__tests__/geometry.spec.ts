@@ -20,7 +20,6 @@ describe("tileToRect", () => {
     src: "",
     name: "",
     rotationY: 0,
-    rotationZ: 0,
     orientation: 0,
     isFaceUp: false,
     x: 0,
@@ -33,21 +32,6 @@ describe("tileToRect", () => {
     const orientation: Orientation = 90;
     const currentTile = { ...tile, ...pos, orientation };
     const expected = { top: 211, left: 89, bottom: 261, right: 161 };
-
-    const tileRect = tileToRect(currentTile);
-
-    expect(tileRect).toEqual(expected);
-  });
-
-  it("ignores Riichi rotation", () => {
-    const rotationZ = 90;
-    const currentTile = { ...tile, rotationZ };
-    const expected = {
-      top: currentTile.y,
-      left: currentTile.x,
-      bottom: currentTile.y + TILE_HEIGHT,
-      right: currentTile.x + TILE_WIDTH,
-    };
 
     const tileRect = tileToRect(currentTile);
 

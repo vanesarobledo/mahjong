@@ -29,7 +29,6 @@ const tiles = ref(
     return {
       ...t,
       rotationY: 0,
-      rotationZ: 0,
       isFaceUp: true,
       orientation: 0,
       x: pos.x,
@@ -181,7 +180,6 @@ function orderTiles() {
   tiles.value.forEach((tile) => {
     const pos = getInitializedPosition(tile.id);
     tile.rotationY = 0;
-    tile.rotationZ = 0;
     tile.orientation = 0;
     tile.isFaceUp = true;
     tile.x = pos.x;
@@ -285,7 +283,7 @@ function updateCoords(tile: Tile, position: Point) {
       <div
         class="tile-3d"
         :style="{
-          transform: `rotateZ(${tile.orientation}deg) rotateY(${tile.rotationY}deg) rotateZ(${tile.rotationZ}deg)`,
+          transform: `rotateZ(${tile.orientation}deg) rotateY(${tile.rotationY}deg)`,
         }"
       >
         <div class="face front">
