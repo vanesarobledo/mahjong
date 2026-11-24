@@ -60,10 +60,10 @@ export function seatOrientation(seat: Seat): Orientation {
 function vector(seat: Seat): Point {
   let x = 0,
     y = 0;
-  if (seat === "East") x -= BREAK_GAP;
-  if (seat === "South") y += BREAK_GAP;
-  if (seat === "West") x += BREAK_GAP;
-  if (seat === "North") y -= BREAK_GAP;
+  if (seat === "East") x = -1;
+  if (seat === "South") y = 1;
+  if (seat === "West") x = 1;
+  if (seat === "North") y = -1;
   return {
     x,
     y,
@@ -111,14 +111,13 @@ export function slotPosition(
   if (brk) {
     const deadWall = deadWallStacks(brk);
     if (slot.seat === brk.seat && slot.stack > brk.total) {
-      slotX += vector(slot.seat).x;
-      slotY += vector(slot.seat).y;
+      slotX += 2 * BREAK_GAP * vector(slot.seat).x;
+      slotY += 2 * BREAK_GAP * vector(slot.seat).y;
     } else if (
-      deadWall.find((s) => slot.stack === s.stack && slot.seat === s.seat) &&
-      slot.seat !== brk.seat
+      deadWall.find((s) => slot.stack === s.stack && slot.seat === s.seat)
     ) {
-      slotX += vector(slot.seat).x;
-      slotY += vector(slot.seat).y;
+      slotX += BREAK_GAP * vector(slot.seat).x;
+      slotY += BREAK_GAP * vector(slot.seat).y;
     }
   }
 
