@@ -26,18 +26,18 @@ A sandbox Riichi Mahjong app where cheating is allowed.
 
 This is a Riichi Mahjong sandbox app that doesn't enforce any rules. Every tile is freely moveable, and cheating is allowed - if you can get away with it!
 
-Right now, the app is a little more than a sandbox to simulate playing Mahjong, but eventually there will be a multiplayer mode.
+Right now, the app is a little more than a sandbox to simulate playing Mahjong and build the walls, but eventually there will be a multiplayer mode.
 
 🔗 Live app: https://cheatatmahjong.netlify.app/
 
 ## ✨ Features
 
-**Current Status**: Tiles can be dragged around the screen, flipped, and rotated. Multiple tiles can be selected and then dragged by holding shift and clicking on the tile or by drawing a box around them.
+**Current Status**: Tiles can be dragged around the screen, flipped, and rotated. Multiple tiles can be selected and then dragged by holding shift and clicking on the tile or by drawing a box around them. A "build wall" button builds the wall, simulates a random 2d6 throw, and slides the dead wall.
 
 ### 🚧 Near-term
 
 - [x] Multi-select and group drag
-- [ ] Build the wall and dead wall automatically
+- [x] Build the wall and dead wall automatically
 - [ ] Hand zones, with optional auto-deal
 - [ ] Seat and round indicators
 - [ ] Swap mode
@@ -75,6 +75,7 @@ npm run dev
 ```
 
 ## 🧪 Running tests
+
 Run the unit tests with `npm test` (watch mode) or `npm test -- --run` (single run).
 
 ## 📄 Project docs
