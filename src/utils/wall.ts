@@ -160,7 +160,7 @@ export function assignTiles(shuffledIds: number[]): Map<number, Slot> {
   return new Map(wallSlots.map((slot, index) => [shuffledIds[index]!, slot]));
 }
 
-function sameSlot(a: Slot, b: Slot): boolean {
+export function sameSlot(a: Slot, b: Slot): boolean {
   return a.seat === b.seat && a.stack === b.stack && a.layer === b.layer;
 }
 

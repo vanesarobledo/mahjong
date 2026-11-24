@@ -4,6 +4,7 @@ import { shuffle } from "@/utils/shuffle.ts";
 import { type Break, computeBreak, doraIndicatorSlot } from "@/utils/break.ts";
 import {
   assignTiles,
+  sameSlot,
   type Seat,
   type Slot,
   slotPosition,
@@ -138,19 +139,16 @@ export const useWall = (
     }
 
     const doraSlot = doraIndicatorSlot(brk.value);
-    tiles.value.find((tile) => {
+    const dora = tiles.value.find((tile) => {
       const slot = slots.get(tile.id);
       if (!slot) throw new Error("Need all 136 tiles");
-
-      if (
-        slot.seat === doraSlot.seat &&
-        slot.stack === doraSlot.stack &&
-        slot.layer === doraSlot.layer
-      ) {
-        tile.isFaceUp = true;
-        tile.rotationY = 0;
-      }
+      return sameSlot(slot, doraSlot);
     });
+
+    if (!dora) throw new Error("No tile in dora slot");
+
+    dora.isFaceUp = true;
+    dora.rotationY = 0;
   }
 
   async function buildWall() {
