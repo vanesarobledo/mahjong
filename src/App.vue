@@ -431,7 +431,7 @@ h1 {
 }
 
 .selected > .tile-3d {
-  outline: 3px rgba(0, 0, 0, 0.6) solid;
+  outline: 3px rgba(0, 0, 0, 0.4) solid;
   outline-offset: -1px;
   border-radius: 3px;
 }
@@ -443,7 +443,7 @@ h1 {
 .marquee {
   position: absolute;
   pointer-events: none;
-  border: 2px dashed #bbb;
+  border: 2px dashed rgba(0, 0, 0, 0.4);
 }
 
 .board.building .tile {
