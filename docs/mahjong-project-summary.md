@@ -15,7 +15,7 @@ Scope is split into two tiers below: **Near-term** (setup/bookkeeping helpers, b
 ### Near-term scope
 
 - **Multi-select & group drag** _(implemented; manual verification pending)_: shift+click toggles a tile in the selection, and dragging on empty board draws a marquee that selects every tile it touches. Dragging any tile in a multi-tile selection moves the whole group. This is a convenience for moving several tiles at once (e.g. hand-dealing). It never restricts where tiles can go. See decisions 8–12; the build log is `docs/multi-select-drag-plan.md`.
-- **Wall / dead-wall auto-build** _(spec approved; not yet implemented)_: an action shuffles all 136 tiles into a physically-accurate 4-wall square (17 stacked pairs per seat), rolls dice, and breaks the wall realistically: the dice total picks the wall and break point, the 7 stacks right of the break become the 14-tile dead wall, and the first dora indicator is flipped. Wall positions use a **slot model**: fixed slot geometry, with tile positions as the only source of truth for which tile is where, so it stays correct when players cheat. See `docs/build-the-wall-spec.md`.
+- **Wall / dead-wall auto-build** _(implemented)_: the "Build the Wall" button shuffles all 136 tiles into a physically-accurate 4-wall square (17 stacked pairs per seat), rolls dice, and breaks the wall realistically: the dice total picks the wall and break point, the 7 stacks right of the break become the 14-tile dead wall (separated from the live wall at both ends), and the first dora indicator is flipped. It plays as three animated beats (build → roll → break) with a reduced-motion fallback, and the dice result stays in the toolbar. Wall positions use a **slot model**: fixed slot geometry, with tile positions as the only source of truth for which tile is where, so it stays correct when players cheat. See decisions 13–17 and `docs/build-the-wall-spec.md`.
 - **Hand zones**: four labeled per-seat regions. Dealing into them can optionally be automated (a "deal" helper draws starting tiles from the wall into each hand), but manual drag-to-fill remains fully supported — dealing is a convenience.
 - **Swap mode**: a dedicated cheat gesture — click "swap," then click two tiles — exchanges their positions/identities in one step, on top of the free drag-anywhere that already works today.
 - **Seat / round indicators**: labels players manually set/cycle themselves (e.g. click to advance E→S→W→N, or bump the round by hand). No app-driven turn logic drives them.
@@ -31,7 +31,8 @@ Scope is split into two tiers below: **Near-term** (setup/bookkeeping helpers, b
 - **Vue 3** (`<script setup>`, Composition API, TypeScript)
 - **@vueuse/core** — `useDraggable` (used directly as a composable, not the `<UseDraggable>` wrapper component — see below for why) and `useEventListener` (window-level listeners for the marquee gesture, auto-cleaned on unmount)
 - **Vitest** — unit tests for pure `utils/` functions. Specs live in `src/**/__tests__/*.spec.ts` (excluded from the app tsconfig, type-checked via `tsconfig.vitest.json`). Node environment for now; switch to `jsdom` + `@vue/test-utils` only when a test needs to mount components. Run with `npm test`.
-- Tile art: SVGs from the [FluffyStuff/riichi-mahjong-tiles](https://github.com/FluffyStuff/riichi-mahjong-tiles) repo, `Regular` tile set, served from `/img/tiles/`
+- Tile art: SVGs from the [FluffyStuff/riichi-mahjong-tiles](https://github.com/FluffyStuff/riichi-mahjong-tiles) repo, `Regular` tile set, served from `/img/tiles/`. Tile backs are a solid CSS colour (`Back.svg` is no longer used).
+- Fonts: `@fontsource-variable/playfair-display` (headings, buttons) and `@fontsource-variable/nunito-sans` (body), self-hosted via npm and imported in `src/main.ts`
 
 ## Data layer
 
@@ -45,7 +46,8 @@ type TileData = { id: number; src: string; name: string };
 - 4 copies of each honour tile (Ton, Nan, Shaa, Pei, Hatsu, Chun, Haku)
 - Ordered: Man → Pin → Sou → Ton → Nan → Shaa → Pei → Hatsu → Chun → Haku
 - `name` is the filename without extension (e.g. `Man5-Dora`)
-- This is purely descriptive data — **no position, rotation, or game state lives here**. Runtime state is added to each tile object at mount time in the parent's `ref()`, producing the `Tile` type (`src/types.ts`): `TileData` + `x`, `y`, `zIndex`, `isFaceUp`, `rotationY`, `rotationZ`.
+- This is purely descriptive data — **no position, rotation, or game state lives here**. Runtime state is added to each tile object at mount time in the parent's `ref()`, producing the `Tile` type (`src/types.ts`): `TileData` + `x`, `y`, `zIndex`, `isFaceUp`, `rotationY`, `rotationZ`, `orientation`.
+- `orientation` (`0 | 90 | 180 | 270`) is which way the tile faces on the table: wall tiles have their bottom edge toward the wall's owner. It's separate from `rotationZ`, which keeps meaning "riichi/call rotation". Shuffle and Order reset it to `0`.
 
 ## Source layout
 
@@ -56,24 +58,29 @@ src/
   composables/
     useSelection.ts           Set<id> of selected tiles + toggle/addId/reset/isInGroup
     useMarquee.ts             drag-on-empty-board box select (gesture, rect, hit-test, commit)
+    useWall.ts                Build the Wall: phase + dice state, the timed three-beat sequence, dora flip
   utils/
-    geometry.ts               Point/Rect types, rectsIntersect, hasMoved, tileToRect
-    tileActions.ts            flipTile, rotateTile (pure per-tile mutations)
+    geometry.ts               Point/Rect types, rectsIntersect, hasMoved, tileToRect (via orientedRect)
+    tileActions.ts            flipTile, rotateTile, bringToFront (per-tile mutations)
     shuffle.ts                generic in-place Fisher-Yates
-  constants.ts                TILE_WIDTH/HEIGHT/PADDING, TILES_PER_ROW, DRAG_THRESHOLD
+    wall.ts                   Seat/Orientation/Slot types, allSlots, seatOrientation, slotPosition,
+                              orientedRect, assignTiles, tileInSlot, TABLE_SIZE, MIN_BOARD_HEIGHT
+    break.ts                  Break type, computeBreak, deadWallStacks, doraIndicatorSlot
+    __tests__/                Vitest specs: geometry, wall, break
+  constants.ts                tile size/padding, drag threshold, wall geometry, build timings
   types.ts                    Tile, TileData
   data/tiles.ts               static 136-tile set
 ```
 
 - **Composables hold stateful, Vue-reactive concerns; `utils/` holds pure functions.** `geometry.ts` and `tileActions.ts` take plain values/objects and know nothing about refs, so they can be reasoned about (and tested) without mounting anything.
-- **Composables are wired together explicitly in `App.vue`**, not by importing each other's state. `useMarquee(boardRef, tiles, selection)` receives the selection object returned by `useSelection()` as an argument (typed via `ReturnType<typeof useSelection>`), so there's exactly one selection instance and its owner is visible at the call site.
+- **Composables are wired together explicitly in `App.vue`**, not by importing each other's state. `useMarquee(boardRef, tiles, selection)` receives the selection object returned by `useSelection()` as an argument (typed via `ReturnType<typeof useSelection>`), so there's exactly one selection instance and its owner is visible at the call site. `useWall(boardRef, tiles, frontMostTile, selection)` follows the same pattern.
 - **Group drag lives entirely in `App.vue`**: its refs (`dragStartPos`, `activeDragId`, `groupDragOrigin`) and the handlers that use them (`handlePick`, `handleTileMove`, `handleOnEnd`, `restackTiles`). A `useGroupDrag` composable that only declared the refs was removed: it split the state from the only code that touched it without hiding anything. Extracting group drag again only pays off if the handlers move with the state, with `tiles`, `selection`, and `bringToFront` passed in the way `useMarquee` receives its dependencies.
 
 ## Component architecture
 
 **Two-component split**, chosen specifically to work around a vueuse limitation:
 
-- **Parent (`App.vue`, the board):** owns the `tiles` ref (array of `Tile`), owns `boardRef` (template ref to the `.board` container), owns the `frontMostTile` z-order counter, owns the group-drag refs, and owns all cross-tile logic — flip, rotate, bring-to-front, selection, group drag, marquee, shuffle/order.
+- **Parent (`App.vue`, the board):** owns the `tiles` ref (array of `Tile`), owns `boardRef` (template ref to the `.board` container), owns the `frontMostTile` z-order counter, owns the group-drag refs, and owns all cross-tile logic — flip, rotate, bring-to-front, selection, group drag, marquee, shuffle/order, and the wall build (through `useWall`).
 - **`TileDraggable.vue` (child, one per tile):** wraps a single tile's `useDraggable()` call. Receives `initialX`/`initialY`/`containerRef` as props and emits three lifecycle events up to the parent:
   - `pick` — from `onStart` (pointerdown)
   - `move(position)` — from `onMove`, every frame of a drag
@@ -92,7 +99,7 @@ src/
    - _Why:_ Vue reuses component instances across re-renders when a stable `:key` is used, which is required so each tile's internal drag position (state living _inside_ `useDraggable`, not in the parent array) survives array reordering (e.g. shuffle).
 
 3. **"Bring to front" (z-ordering) is implemented via a numeric `zIndex` on each tile, not DOM order.**
-   - Each tile gets `zIndex: index` at construction. A single counter in the parent (`frontMostTile`) holds the next top value; on pick (drag start / `onStart`), the picked tile is assigned the counter's value and the counter increments. The value is bound as `:style="{ zIndex }"` on `<TileDraggable>`, which Vue merges with the `left`/`top` style `useDraggable` sets on the child's root element (fallthrough `style` merging).
+   - Each tile gets `zIndex: index` at construction. A single counter in the parent (`frontMostTile`) holds the next top value; on pick (drag start / `onStart`), the picked tile is assigned the counter's value and the counter increments. That step is `bringToFront(tile, frontMostTile)` in `tileActions.ts`, which takes the counter ref so `App.vue` and `useWall` share it. The value is bound as `:style="{ zIndex }"` on `<TileDraggable>`, which Vue merges with the `left`/`top` style `useDraggable` sets on the child's root element (fallthrough `style` merging).
    - `orderTiles()` and `shuffleTiles()` reset every tile's `zIndex` to its `id` and reset the counter to `Tiles.length`, so z-index values don't grow across games.
    - _Bug this fixed:_ the earlier version spliced the picked tile out of the `tiles` array and pushed it to the end, letting DOM paint order decide stacking. Because the `v-for` is keyed, Vue physically moved that tile's DOM node during `pointerdown`. The browser then didn't deliver the following `click` to the moved node, so the first click on any tile that wasn't already last in the array was swallowed — shift-click selection (and plain-click flip) needed two clicks. With `zIndex`, the DOM never moves on pick, so `click` fires reliably.
    - _Alternative considered:_ keep a separate `stackOrder` array of ids and derive z-index from each id's position in it (keeps values small, but costs an `indexOf` per lookup). The counter was chosen for simplicity; its growth within a game is irrelevant in practice (browser z-index max is a 32-bit int).
@@ -105,7 +112,8 @@ src/
    - The parent updates `tile.x`/`tile.y` (after a Fisher-Yates shuffle of the array + randomizing coordinates); the child watches `[() => props.initialX, () => props.initialY]` and imperatively sets the composable's internal `position.value` when they change. Chosen deliberately over the "bump a key to force remount" alternative, for learning purposes (understanding `watch`'s explicit source-tracking model, in contrast to React's `useEffect`).
    - The watch early-returns when the incoming value already equals the composable's current `x`/`y`. Without that guard, every drag frame round-trips (child emits `move` → parent writes `tile.x` → prop changes → watch writes the same value back into `position`). It converges immediately, but it's a redundant write per frame.
 
-6. **Flip (`rotateY`) and riichi-call rotation (`rotateZ`) are separate transform axes on the same element**, composed together in one `transform` string. Both coexist safely because `transform-style: preserve-3d` is set on the tile wrapper.
+6. **Orientation, flip (`rotateY`), and riichi-call rotation (`rotateZ`) are composed in one `transform` string** on `.tile-3d`: `rotateZ(orientation) rotateY(flip) rotateZ(riichi)`. They coexist safely because `transform-style: preserve-3d` is set on the tile wrapper.
+   - _Order matters:_ transform functions apply right to left in the element's local frame ([MDN: transform](https://developer.mozilla.org/en-US/docs/Web/CSS/transform)). Orientation goes first (outermost) so a side-wall tile flips and riichi-rotates relative to its own facing.
 
 7. **Interaction model, to avoid gesture collisions:**
    - Single click → flip face up/down (skipped if the pointer moved more than `DRAG_THRESHOLD` px since pick, so finishing a drag doesn't flip the tile)
@@ -143,12 +151,34 @@ src/
     - Pointer coords are converted to board space with `clientToBoard` (`clientX − board.getBoundingClientRect().left`), matching the coordinate space of `tile.x`/`tile.y`.
     - The box is normalized into a `Rect` via `computed` (min/max of start and current), so dragging up/left works.
     - Hit-test: `rectsIntersect(tileToRect(tile), rect)`. Overlap is strict: rectangles whose edges only touch do **not** intersect (`!(b.left >= a.right) && !(b.right <= a.left)`, same for y), so a marquee that grazes a tile's edge doesn't select it. Tiles hidden under other tiles are selected too; that's consistent with "automate, don't judge."
-    - **Rotated tiles use their unrotated rect.** `tileToRect` ignores `rotationZ`, so grazing the long side of a riichi-rotated tile can miss or over-select slightly. Chosen as "ignore it until it bothers someone" over swapping width/height for rotated tiles.
+    - **Hit-testing follows `orientation` but not riichi rotation.** `tileToRect` delegates to `orientedRect`, which swaps width and height around the tile's centre for orientations 90/270, so side-wall tiles hit-test correctly. It still ignores `rotationZ`, so grazing the long side of a riichi-rotated tile can miss or over-select slightly. Chosen as "ignore it until it bothers someone".
     - The marquee renders at `zIndex: frontMostTile + 1` with `pointer-events: none`, so it draws above every tile without intercepting events.
+
+13. **Wall slot model: geometry is a pure function, and tile positions stay the source of truth.**
+    - A slot is `{ seat, stack: 1..17, layer: 'top' | 'bottom' }`. `slotPosition(slot, brk?)` maps a slot to board coordinates plus an orientation. The wall keeps no persistent list of tile ids.
+    - _Why:_ cheating moves tiles without the app knowing. A stored `liveWall: number[]` would go stale on the first cheat. With slots, whatever tile physically sits in a slot _is_ the tile in that slot. Position-based occupancy lookup (snap + tolerance) is deferred to the deal/draw feature, its first real consumer.
+    - Side-wall tiles (South/North) are offset by `(TILE_HEIGHT − TILE_WIDTH) / 2` in x and y, because CSS rotates around the element's centre while `left`/`top` still describe the unrotated box ([MDN: transform-origin](https://developer.mozilla.org/en-US/docs/Web/CSS/transform-origin)).
+    - The table is a fixed square (`TABLE_SIZE = 2 × CORNER_GAP + WALL_SIZE × TILE_WIDTH`), offset by `HAND_MARGIN` to leave room for future hand zones, and centred horizontally at build time from `boardRef.clientWidth`. The board's `min-height` is `MIN_BOARD_HEIGHT` so the square fits; the page scrolls on small screens.
+
+14. **The dice break opens a gap at both ends of the dead wall.** Every stack shifts toward its own wall's stack 17: the dice wall's live stacks past the break by `2 × BREAK_GAP`, all 7 dead-wall stacks (including any wrapped onto the next wall) by `BREAK_GAP`, and everything else not at all. The differences leave a `BREAK_GAP` gap on each side of the dead wall, with no overlaps for any total 2–12. Earlier versions that moved only the dead wall, or only the live side, either collided with live stacks or left the dead wall flush at its far end. Full history: spec design decision 9.
+    - The dead wall's wrap (total < 7) uses a 68-stack ring with modular arithmetic, normalised with `((n % 17) + 17) % 17` because JS `%` keeps the dividend's sign ([MDN: Remainder](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Remainder)).
+
+15. **Randomness stays at the edge.** `computeBreak`, `deadWallStacks`, `doraIndicatorSlot`, `slotPosition`, and `assignTiles` take dice values and an already-shuffled id order as arguments. Only `useWall` calls `Math.random`, which keeps the wall logic deterministic and table-testable.
+
+16. **The build sequence is timed with `setTimeout`, and its transitions are scoped to the build.**
+    - `buildWall()` awaits a `wait(ms)` helper between beats (build → roll → break → dora flip). Timer ids go into a `pendingTimers` set that `onScopeDispose` clears, so unmounting mid-build cancels the sequence. Timers were chosen over `transitionend`, which fires once per element _per property_ (136 tiles × `left`/`top`), making "all done" awkward to detect.
+    - `phase` (`'idle' | 'building' | 'rolling' | 'breaking'`) is written only by `buildWall()`. It drives the toolbar message, the button's `disabled`, and a `building` class on `.board`.
+    - The `left`/`top` transition lives only on `.board.building .tile`, with its duration bound via `v-bind` in CSS. _Why:_ `useDraggable` and group drag both write inline `left`/`top`, so a permanent transition would make drags lag the cursor and group drags rubber-band. A per-tile `transitionDelay` of `i × BUILD_STAGGER_MS` makes the wall fill in, and beat 1 waits for the last tile.
+    - `.board.building` also sets `pointer-events: none`, so a drag can't fight the CSS transition for a tile's position. This is a brief UI lock during an automated action, not a rules check.
+    - Under `prefers-reduced-motion: reduce`, `wait` resolves immediately and CSS sets the slide and flip transitions to `0ms` ([MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion)).
+
+17. **A build resets the table.** All 136 tiles are shuffled and placed regardless of where they were; face, `rotationZ`, orientation, zIndex, and selection are reset. Bottom-layer tiles get `zIndex: 0`; top-layer tiles go through `bringToFront` after `frontMostTile` resets to 136, so tops always draw over bottoms. Same-layer tiles never overlap (covered by collision tests for every total), so no screen-y ordering is needed.
+
+18. **Dragged tiles get a `lifted` class** (larger drop shadow). `isLifted(tile)` is true for the tile being dragged (`draggedId`, set in `handlePick`, cleared in `handleOnEnd`) and for the other tiles in a group drag (`groupDragOrigin`).
 
 ## Known open items / not yet implemented
 
-- **Snap-to-grid**: not natively supported by `useDraggable` (confirmed via docs — no `grid`/`snap` option exists). Plan is to implement manually via the `onEnd` callback, rounding final position to a grid — but scoped only to wall/dead-wall/hand areas (via a bounds check against those regions), leaving discards and calls freely draggable.
-- **Wall / dead-wall auto-build**: specced in `docs/build-the-wall-spec.md` (slot model, dice break, dora flip, animated build), not yet implemented.
+- **Snap-to-grid / slot occupancy**: not natively supported by `useDraggable` (confirmed via docs — no `grid`/`snap` option exists). Plan is to implement manually via the `onEnd` callback, snapping to wall slots (`slotPosition`) and hand areas via a bounds check, leaving discards and calls freely draggable. The position-based "which tile is in slot k" lookup comes with it, driven by the deal/draw helper. (`tileInSlot` exists, but it reads the build's assignment map, not tile positions, and the app doesn't use it yet.)
+- **Wall follow-ups**: dealing, "draw next tile", rinshan draws, kan dora flips, seat rotation (the dealer is always East, at the bottom). A `useWall` test (jsdom + fake timers) for "after a build, exactly one tile is face-up" is not written; it's verified manually.
 - **Hand zones, seat/round indicators, riichi flag+pool, swap mode**: none implemented yet — see Near-term scope above for what each should do.
 - **Touch support**: the double-click/double-tap rotate fallback and `touch-action: manipulation` described in earlier versions of this doc were never implemented. Rotation is right-click only, so it's unavailable on touch devices. Marquee and selection are mouse-event based (`mousedown`/`mousemove`/`mouseup`, `shiftKey`) and won't work on touch either.
