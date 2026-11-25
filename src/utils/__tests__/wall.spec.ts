@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   allSlots,
   assignTiles,
+  getTableOriginX,
   type Orientation,
   orientedRect,
   type Seat,
@@ -800,5 +801,31 @@ describe("tileInSlot", () => {
     expect(doraTileId).toBe(expectedId);
     expect(otherSlotId).toBe(otherExpectedId);
     expect(nonExistentSlotId).toBeUndefined();
+  });
+});
+
+describe("tableOriginX", () => {
+  it.each<{
+    description: string;
+    boardWidth: number;
+    expected: number;
+  }>([
+    {
+      description: "centres the table on a wide board",
+      boardWidth: TABLE_SIZE + 2 * HAND_MARGIN + 200,
+      expected: 100,
+    },
+    {
+      description: "returns 0 at exactly the minimum width",
+      boardWidth: TABLE_SIZE + 2 * HAND_MARGIN,
+      expected: 0,
+    },
+    {
+      description: "clamps to 0 on a board narrow than the table + margins",
+      boardWidth: TABLE_SIZE + 2 * HAND_MARGIN - 200,
+      expected: 0,
+    },
+  ])("$description", ({ boardWidth, expected }) => {
+    expect(getTableOriginX(boardWidth)).toBe(expected);
   });
 });

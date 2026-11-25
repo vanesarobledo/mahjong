@@ -4,11 +4,12 @@ import { shuffle } from "@/utils/shuffle.ts";
 import { type Break, computeBreak, doraIndicatorSlot } from "@/utils/break.ts";
 import {
   assignTiles,
+  getTableOriginX,
+  type Orientation,
   sameSlot,
   type Seat,
   type Slot,
   slotPosition,
-  TABLE_SIZE,
 } from "@/utils/wall.ts";
 import type { useSelection } from "@/composables/useSelection.ts";
 import { bringToFront } from "@/utils/tileActions.ts";
@@ -18,8 +19,8 @@ import {
   BUILD_SLIDE_MS,
   BUILD_STAGGER_MS,
   DICE_REVEAL_MS,
-  HAND_MARGIN,
 } from "@/constants.ts";
+import type { Point } from "@/utils/geometry.ts";
 
 export type Phase = "idle" | "building" | "rolling" | "breaking";
 
@@ -43,12 +44,7 @@ export const useWall = (
   const phase: Ref<Phase> = ref("idle");
   const pendingTimers = new Set<ReturnType<typeof setTimeout>>();
   const brk: Ref<Break | null> = ref(null);
-
-  function getBoardXOffset(): number {
-    const boardWidth = boardRef.value ? boardRef.value.clientWidth : 1010;
-    const tableOriginX = (boardWidth - TABLE_SIZE) / 2 - HAND_MARGIN;
-    return Math.max(0, tableOriginX);
-  }
+  const tableOriginX: Ref<number> = ref(0);
 
   onScopeDispose(() => {
     pendingTimers.forEach((id) => {
@@ -87,20 +83,21 @@ export const useWall = (
   }
 
   function resetTiles(slots: Map<number, Slot>) {
-    frontMostTile.value = Tiles.length;
+    frontMostTile.value = 0;
 
-    tiles.value.forEach((tile) => {
-      const slot = slots.get(tile.id);
-      if (!slot) throw new Error("Need all 136 tiles");
+    for (const layer of ["bottom", "top"] as const) {
+      tiles.value.forEach((tile) => {
+        const slot = slots.get(tile.id);
+        if (!slot) throw new Error("Need all 136 tiles");
 
-      tile.isFaceUp = false;
-      tile.rotationY = 180;
-      tile.zIndex = 0;
+        tile.isFaceUp = false;
+        tile.rotationY = 180;
 
-      if (slot.layer === "top") {
-        bringToFront(tile, frontMostTile);
-      }
-    });
+        if (slot.layer === layer) {
+          bringToFront(tile, frontMostTile);
+        }
+      });
+    }
   }
 
   function placeTiles(slots: Map<number, Slot>, xOffset: number, brk?: Break) {
@@ -121,6 +118,11 @@ export const useWall = (
     const slots = assignTiles(tiles.value.map((t) => t.id));
     selection.reset();
     return slots;
+  }
+
+  function wallSlotOnBoard(slot: Slot): Point & { orientation: Orientation } {
+    const slotPos = slotPosition(slot);
+    return { ...slotPos, x: slotPos.x + tableOriginX.value };
   }
 
   function breakWall(slots: Map<number, Slot>, xOffset: number) {
@@ -144,7 +146,7 @@ export const useWall = (
       return sameSlot(slot, doraSlot);
     });
 
-    if (!dora) throw new Error("No tile in dora slot");
+    if (!dora) throw new Error("No tile in Dora slot");
 
     dora.isFaceUp = true;
     dora.rotationY = 0;
@@ -153,6 +155,10 @@ export const useWall = (
   async function buildWall() {
     if (phase.value !== "idle") {
       return;
+    }
+
+    if (!boardRef.value) {
+      throw new Error("Board must be mounted");
     }
 
     // Beat 1: Build
@@ -164,9 +170,9 @@ export const useWall = (
       wall: "",
     };
     const slots = shuffleTilesToSlots();
-    const xOffset = getBoardXOffset();
+    tableOriginX.value = getTableOriginX(boardRef.value.clientWidth);
     resetTiles(slots);
-    placeTiles(slots, xOffset);
+    placeTiles(slots, tableOriginX.value);
 
     await wait(BUILD_SLIDE_MS + (Tiles.length - 1) * BUILD_STAGGER_MS);
 
@@ -183,7 +189,7 @@ export const useWall = (
     await wait(DICE_REVEAL_MS);
 
     // Beat 3: Break
-    breakWall(slots, xOffset);
+    breakWall(slots, tableOriginX.value);
 
     await wait(BREAK_MS);
 
@@ -196,6 +202,8 @@ export const useWall = (
   return {
     diceResult,
     phase,
+    tableOriginX,
+    wallSlotOnBoard,
     buildWall,
   };
 };
