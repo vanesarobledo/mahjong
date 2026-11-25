@@ -9,16 +9,10 @@ import {
   type Slot,
   slotPosition,
   TABLE_SIZE,
-  tileInSlot,
+  tableOriginX,
+  tileInSlot
 } from "@/utils/wall.ts";
-import {
-  BREAK_GAP,
-  HAND_MARGIN,
-  STACK_OFFSET,
-  TILE_HEIGHT,
-  TILE_WIDTH,
-  WALL_SIZE,
-} from "@/constants.ts";
+import { BREAK_GAP, HAND_MARGIN, STACK_OFFSET, TILE_HEIGHT, TILE_WIDTH, WALL_SIZE } from "@/constants.ts";
 import { type Point, type Rect, rectsIntersect } from "@/utils/geometry.ts";
 import { type Break, deadWallStacks } from "@/utils/break.ts";
 
@@ -800,5 +794,31 @@ describe("tileInSlot", () => {
     expect(doraTileId).toBe(expectedId);
     expect(otherSlotId).toBe(otherExpectedId);
     expect(nonExistentSlotId).toBeUndefined();
+  });
+});
+
+describe("tableOriginX", () => {
+  it.each<{
+    description: string;
+    boardWidth: number,
+    expected: number,
+  }>([
+    {
+      description: "centres the table on a wide board",
+      boardWidth: TABLE_SIZE + 2 * HAND_MARGIN + 200,
+      expected: 215,
+    },
+    {
+      description: "returns 0 at exactly the minimum width",
+      boardWidth: TABLE_SIZE + 2 * HAND_MARGIN,
+      expected: 0,
+    },
+    {
+      description: "clamps to 0 on a board narrow than the table + margins",
+      boardWidth: TABLE_SIZE + 2 * HAND_MARGIN - 200,
+      expected: 0,
+    },
+  ])("$description", ({ boardWidth, expected }) => {
+    expect(tableOriginX(boardWidth)).toBe(expected);
   });
 });

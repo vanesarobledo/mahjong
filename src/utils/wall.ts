@@ -9,6 +9,7 @@ import {
   WALL_SIZE,
 } from "@/constants.ts";
 import { type Break, deadWallStacks } from "@/utils/break.ts";
+import { onScopeDispose } from "vue";
 
 const SEATS = ["East", "South", "West", "North"] as const;
 
@@ -175,3 +176,8 @@ export function tileInSlot(
   }
   return undefined;
 }
+
+export function tableOriginX(boardWidth: number): number {
+  return 0;
+}
+
