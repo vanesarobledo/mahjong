@@ -83,20 +83,21 @@ export const useWall = (
   }
 
   function resetTiles(slots: Map<number, Slot>) {
-    frontMostTile.value = Tiles.length;
+    frontMostTile.value = 0;
 
-    tiles.value.forEach((tile) => {
-      const slot = slots.get(tile.id);
-      if (!slot) throw new Error("Need all 136 tiles");
+    for (const layer of ["bottom", "top"] as const) {
+      tiles.value.forEach((tile) => {
+        const slot = slots.get(tile.id);
+        if (!slot) throw new Error("Need all 136 tiles");
 
-      tile.isFaceUp = false;
-      tile.rotationY = 180;
-      tile.zIndex = 0;
+        tile.isFaceUp = false;
+        tile.rotationY = 180;
 
-      if (slot.layer === "top") {
-        bringToFront(tile, frontMostTile);
-      }
-    });
+        if (slot.layer === layer) {
+          bringToFront(tile, frontMostTile);
+        }
+      });
+    }
   }
 
   function placeTiles(slots: Map<number, Slot>, xOffset: number, brk?: Break) {
