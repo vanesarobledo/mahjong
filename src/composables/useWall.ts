@@ -3,7 +3,8 @@ import type { Tile } from "@/types.ts";
 import { shuffle } from "@/utils/shuffle.ts";
 import { type Break, computeBreak, doraIndicatorSlot } from "@/utils/break.ts";
 import {
-  assignTiles,
+  assignTiles, getTableOriginX,
+  type Orientation,
   sameSlot,
   type Seat,
   type Slot,
@@ -20,6 +21,7 @@ import {
   DICE_REVEAL_MS,
   HAND_MARGIN,
 } from "@/constants.ts";
+import type { Point } from "@/utils/geometry.ts";
 
 export type Phase = "idle" | "building" | "rolling" | "breaking";
 
@@ -43,11 +45,10 @@ export const useWall = (
   const phase: Ref<Phase> = ref("idle");
   const pendingTimers = new Set<ReturnType<typeof setTimeout>>();
   const brk: Ref<Break | null> = ref(null);
+  const tableOriginX: Ref<number> = ref(0);
 
-  function getBoardXOffset(): number {
-    const boardWidth = boardRef.value ? boardRef.value.clientWidth : 1010;
-    const tableOriginX = (boardWidth - TABLE_SIZE) / 2 - HAND_MARGIN;
-    return Math.max(0, tableOriginX);
+  function getBoardWidth(): number {
+    return boardRef.value ? boardRef.value.clientWidth : TABLE_SIZE + 2 * HAND_MARGIN;
   }
 
   onScopeDispose(() => {
@@ -123,6 +124,8 @@ export const useWall = (
     return slots;
   }
 
+  function wallSlotOnBoard(slot: Slot): Point & { orientation: Orientation } {}
+
   function breakWall(slots: Map<number, Slot>, xOffset: number) {
     if (!brk.value) {
       return;
@@ -155,6 +158,10 @@ export const useWall = (
       return;
     }
 
+    if (!boardRef.value) {
+      throw new Error("Board must be mounted")
+    }
+
     // Beat 1: Build
     phase.value = "building";
     diceResult.value = {
@@ -164,9 +171,9 @@ export const useWall = (
       wall: "",
     };
     const slots = shuffleTilesToSlots();
-    const xOffset = getBoardXOffset();
+    tableOriginX.value = getTableOriginX(boardRef.value.clientWidth);
     resetTiles(slots);
-    placeTiles(slots, xOffset);
+    placeTiles(slots, tableOriginX.value);
 
     await wait(BUILD_SLIDE_MS + (Tiles.length - 1) * BUILD_STAGGER_MS);
 
@@ -183,7 +190,7 @@ export const useWall = (
     await wait(DICE_REVEAL_MS);
 
     // Beat 3: Break
-    breakWall(slots, xOffset);
+    breakWall(slots, tableOriginX.value);
 
     await wait(BREAK_MS);
 
@@ -196,6 +203,8 @@ export const useWall = (
   return {
     diceResult,
     phase,
+    tableOriginX,
+    wallSlotOnBoard,
     buildWall,
   };
 };
