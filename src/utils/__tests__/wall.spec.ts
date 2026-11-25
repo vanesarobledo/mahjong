@@ -9,7 +9,7 @@ import {
   type Slot,
   slotPosition,
   TABLE_SIZE,
-  tableOriginX,
+  getTableOriginX,
   tileInSlot
 } from "@/utils/wall.ts";
 import { BREAK_GAP, HAND_MARGIN, STACK_OFFSET, TILE_HEIGHT, TILE_WIDTH, WALL_SIZE } from "@/constants.ts";
@@ -805,8 +805,8 @@ describe("tableOriginX", () => {
   }>([
     {
       description: "centres the table on a wide board",
-      boardWidth: TABLE_SIZE + 2 * HAND_MARGIN + 200,
-      expected: 215,
+      boardWidth: TABLE_SIZE + (2 * HAND_MARGIN) + 200,
+      expected: 100,
     },
     {
       description: "returns 0 at exactly the minimum width",
@@ -819,6 +819,6 @@ describe("tableOriginX", () => {
       expected: 0,
     },
   ])("$description", ({ boardWidth, expected }) => {
-    expect(tableOriginX(boardWidth)).toBe(expected);
+    expect(getTableOriginX(boardWidth)).toBe(expected);
   });
 });

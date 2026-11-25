@@ -177,7 +177,8 @@ export function tileInSlot(
   return undefined;
 }
 
-export function tableOriginX(boardWidth: number): number {
-  return 0;
+export function getTableOriginX(boardWidth: number): number {
+  const tableOriginX = (boardWidth - TABLE_SIZE) / 2 - HAND_MARGIN;
+  return Math.max(0, tableOriginX);
 }
 
