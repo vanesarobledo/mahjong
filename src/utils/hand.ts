@@ -5,6 +5,10 @@ export function handSlotPosition(
   seat: Seat,
   index: number,
 ): Point & { orientation: Orientation } {
+  if (index <= 0 || index > 13) {
+    throw new Error("Invalid slot index");
+  }
+
   return {
     x: 0,
     y: 0,
