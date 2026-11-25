@@ -4,10 +4,10 @@ A running list of the bugs the project owner has chosen to fix. It isn't a full 
 
 Same format as the feature specs: symptom, cause, fix direction, signatures, and test cases, but no implementations. Write the tests first.
 
-| #   | Bug                                             | Status | Must land before            |
-| --- | ----------------------------------------------- | ------ | --------------------------- |
-| 1   | Wall x-offset isn't kept after the build        | Open   | Deal spec, Phase 5          |
-| 2   | Build leaves z-indices outside 0–135 (chore)    | Open   | —                           |
+| #   | Bug                                          | Status | Must land before   |
+| --- | -------------------------------------------- | ------ | ------------------ |
+| 1   | Wall x-offset isn't kept after the build     | Open   | Deal spec, Phase 5 |
+| 2   | Build leaves z-indices outside 0–135 (chore) | Open   | —                  |
 
 ---
 
@@ -17,11 +17,11 @@ Same format as the feature specs: symptom, cause, fix direction, signatures, and
 
 ### Symptom (once a consumer exists)
 
-Build the wall, resize the window, then deal. The occupancy lookup computes where each wall stack *should* be with a fresh x-offset. The tiles were placed with the old offset, so no tile is within `STACK_TOLERANCE` and the deal finds an empty wall.
+Build the wall, resize the window, then deal. The occupancy lookup computes where each wall stack _should_ be with a fresh x-offset. The tiles were placed with the old offset, so no tile is within `STACK_TOLERANCE` and the deal finds an empty wall.
 
 ### Cause
 
-`buildWall()` computes `const xOffset = getBoardXOffset()` as a local variable (`src/composables/useWall.ts`) and adds it into every tile's `x`. Tile positions are board-space with that offset baked in, but the offset itself is thrown away once the build ends. Any later code that needs "where is slot k on the board" can only recompute the offset from the board's *current* width. That's only correct if the window hasn't changed size since the build.
+`buildWall()` computes `const xOffset = getBoardXOffset()` as a local variable (`src/composables/useWall.ts`) and adds it into every tile's `x`. Tile positions are board-space with that offset baked in, but the offset itself is thrown away once the build ends. Any later code that needs "where is slot k on the board" can only recompute the offset from the board's _current_ width. That's only correct if the window hasn't changed size since the build.
 
 Tiles deliberately don't move on resize (positions are the source of truth, decision 13), so the fix is to remember the offset, not to re-centre the tiles.
 
@@ -66,7 +66,7 @@ Build should end the way Shuffle and Order do: every tile's `zIndex` in 0–135 
 
 ### Fix direction
 
-Number the bottoms first, then the tops: bottoms get 0–67 and tops 68–135, so every top tile still draws above every bottom tile. Resetting the counter to 0 and calling `bringToFront` on all bottom tiles, then all top tiles, does it with the existing helper and ends with the counter at 136. The order *within* a layer doesn't matter, because same-layer tiles never overlap (wall spec, Phase 2 collision tests).
+Number the bottoms first, then the tops: bottoms get 0–67 and tops 68–135, so every top tile still draws above every bottom tile. Resetting the counter to 0 and calling `bringToFront` on all bottom tiles, then all top tiles, does it with the existing helper and ends with the counter at 136. The order _within_ a layer doesn't matter, because same-layer tiles never overlap (wall spec, Phase 2 collision tests).
 
 ### Acceptance
 

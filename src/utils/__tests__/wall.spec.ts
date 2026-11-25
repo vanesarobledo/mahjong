@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   allSlots,
   assignTiles,
+  getTableOriginX,
   type Orientation,
   orientedRect,
   type Seat,
@@ -9,10 +10,16 @@ import {
   type Slot,
   slotPosition,
   TABLE_SIZE,
-  getTableOriginX,
-  tileInSlot
+  tileInSlot,
 } from "@/utils/wall.ts";
-import { BREAK_GAP, HAND_MARGIN, STACK_OFFSET, TILE_HEIGHT, TILE_WIDTH, WALL_SIZE } from "@/constants.ts";
+import {
+  BREAK_GAP,
+  HAND_MARGIN,
+  STACK_OFFSET,
+  TILE_HEIGHT,
+  TILE_WIDTH,
+  WALL_SIZE,
+} from "@/constants.ts";
 import { type Point, type Rect, rectsIntersect } from "@/utils/geometry.ts";
 import { type Break, deadWallStacks } from "@/utils/break.ts";
 
@@ -800,12 +807,12 @@ describe("tileInSlot", () => {
 describe("tableOriginX", () => {
   it.each<{
     description: string;
-    boardWidth: number,
-    expected: number,
+    boardWidth: number;
+    expected: number;
   }>([
     {
       description: "centres the table on a wide board",
-      boardWidth: TABLE_SIZE + (2 * HAND_MARGIN) + 200,
+      boardWidth: TABLE_SIZE + 2 * HAND_MARGIN + 200,
       expected: 100,
     },
     {

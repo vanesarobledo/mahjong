@@ -83,13 +83,13 @@ Source: Christopher Yee, _A Guide for Learning and Playing Japanese Mahjong — 
 
 ## Constants (in `src/constants.ts`, all tunable)
 
-| Name              | Starting value            | Meaning                                                            |
-| ----------------- | ------------------------- | ------------------------------------------------------------------ |
-| `HAND_SIZE`       | 13                        | Tiles in a non-dealer starting hand                                |
-| `DRAWN_TILE_GAP`  | `TILE_WIDTH / 2`          | Extra gap before hand index 13                                     |
-| `STACK_TOLERANCE` | `TILE_WIDTH / 4`          | Max centre distance for a tile to count as "in" a stack (< 25)     |
-| `DEAL_STEP_MS`    | 200                       | Duration of each take (one seat's group of 4, or one single tile) |
-| `DEAL_STAGGER_MS` | 30                        | Per-tile delay within one take                                     |
+| Name              | Starting value   | Meaning                                                           |
+| ----------------- | ---------------- | ----------------------------------------------------------------- |
+| `HAND_SIZE`       | 13               | Tiles in a non-dealer starting hand                               |
+| `DRAWN_TILE_GAP`  | `TILE_WIDTH / 2` | Extra gap before hand index 13                                    |
+| `STACK_TOLERANCE` | `TILE_WIDTH / 4` | Max centre distance for a tile to count as "in" a stack (< 25)    |
+| `DEAL_STEP_MS`    | 200              | Duration of each take (one seat's group of 4, or one single tile) |
+| `DEAL_STAGGER_MS` | 30               | Per-tile delay within one take                                    |
 
 ---
 
@@ -232,6 +232,6 @@ Manual acceptance (browser):
 
 - **Phase 1:** `slotPosition` uses one `if` block per seat. Could the hands reuse the walls' per-seat axis (the private `vector(seat)` in `wall.ts`) so each seat is "origin + index × direction", rather than four branches? What does each style make easier to test or to get wrong?
 - **Phase 3:** `deadWallStacks` walks the ring backward from the break, and `liveWallStacks` walks it forward. Is there a shared helper hiding in there (ring index ↔ `{seat, stack}`)? Pull it out only if both functions get simpler.
-- **Phase 5:** why compare tile *centres* (or `left`/`top`) rather than `orientedRect` footprints? Hint: what happens to `left`/`top` when a tile rotates about its centre? ([MDN: transform-origin](https://developer.mozilla.org/en-US/docs/Web/CSS/transform-origin))
+- **Phase 5:** why compare tile _centres_ (or `left`/`top`) rather than `orientedRect` footprints? Hint: what happens to `left`/`top` when a tile rotates about its centre? ([MDN: transform-origin](https://developer.mozilla.org/en-US/docs/Web/CSS/transform-origin))
 - **Phase 5:** `liveWallTiles` runs over 136 tiles × 61 stacks. Is that worth optimising, at one call per deal?
 - **Phase 6:** the deal reads the wall once at the start. What would go wrong if it re-read the wall before every take, mid-animation?
