@@ -3,7 +3,8 @@ import type { Tile } from "@/types.ts";
 import { shuffle } from "@/utils/shuffle.ts";
 import { type Break, computeBreak, doraIndicatorSlot } from "@/utils/break.ts";
 import {
-  assignTiles, getTableOriginX,
+  assignTiles,
+  getTableOriginX,
   type Orientation,
   sameSlot,
   type Seat,
@@ -46,10 +47,6 @@ export const useWall = (
   const pendingTimers = new Set<ReturnType<typeof setTimeout>>();
   const brk: Ref<Break | null> = ref(null);
   const tableOriginX: Ref<number> = ref(0);
-
-  function getBoardWidth(): number {
-    return boardRef.value ? boardRef.value.clientWidth : TABLE_SIZE + 2 * HAND_MARGIN;
-  }
 
   onScopeDispose(() => {
     pendingTimers.forEach((id) => {
@@ -124,7 +121,10 @@ export const useWall = (
     return slots;
   }
 
-  function wallSlotOnBoard(slot: Slot): Point & { orientation: Orientation } {}
+  function wallSlotOnBoard(slot: Slot): Point & { orientation: Orientation } {
+    const slotPos = slotPosition(slot);
+    return { ...slotPos, x: slotPos.x + tableOriginX.value };
+  }
 
   function breakWall(slots: Map<number, Slot>, xOffset: number) {
     if (!brk.value) {
@@ -147,7 +147,7 @@ export const useWall = (
       return sameSlot(slot, doraSlot);
     });
 
-    if (!dora) throw new Error("No tile in dora slot");
+    if (!dora) throw new Error("No tile in Dora slot");
 
     dora.isFaceUp = true;
     dora.rotationY = 0;
@@ -159,7 +159,7 @@ export const useWall = (
     }
 
     if (!boardRef.value) {
-      throw new Error("Board must be mounted")
+      throw new Error("Board must be mounted");
     }
 
     // Beat 1: Build
