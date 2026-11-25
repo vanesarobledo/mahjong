@@ -1,4 +1,4 @@
-import type { Orientation, Seat } from "@/utils/wall.ts";
+import  { type Orientation, type Seat, seatOrientation } from "@/utils/wall.ts";
 import type { Point, Rect } from "@/utils/geometry.ts";
 
 export function handSlotPosition(
@@ -9,10 +9,11 @@ export function handSlotPosition(
     throw new Error("Invalid slot index");
   }
 
+
   return {
     x: 0,
     y: 0,
-    orientation: 0,
+    orientation: seatOrientation(seat),
   }
 }
 export function handZoneRect(seat: Seat): Rect {
