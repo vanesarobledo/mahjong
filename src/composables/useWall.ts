@@ -10,7 +10,6 @@ import {
   type Seat,
   type Slot,
   slotPosition,
-  TABLE_SIZE,
 } from "@/utils/wall.ts";
 import type { useSelection } from "@/composables/useSelection.ts";
 import { bringToFront } from "@/utils/tileActions.ts";
@@ -20,7 +19,6 @@ import {
   BUILD_SLIDE_MS,
   BUILD_STAGGER_MS,
   DICE_REVEAL_MS,
-  HAND_MARGIN,
 } from "@/constants.ts";
 import type { Point } from "@/utils/geometry.ts";
 
