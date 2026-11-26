@@ -30,33 +30,60 @@ describe("handSlotPosition", () => {
     });
   }
 
-  it("index 0 is at the owner's left for $seat hand", () => {
-    const eastHand = getHand("East");
-    const northHand = getHand("North");
-    const westHand = getHand("West");
-    const southHand = getHand("South");
+  it.each<{
+    seat: Seat;
+    axis: "x" | "y";
+    size: "smallest" | "largest";
+  }>([
+    {
+      seat: "East",
+      axis: "x",
+      size: "smallest",
+    },
+    {
+      seat: "West",
+      axis: "x",
+      size: "largest",
+    },
+    {
+      seat: "North",
+      axis: "y",
+      size: "smallest",
+    },
+    {
+      seat: "South",
+      axis: "y",
+      size: "largest",
+    },
+  ])(
+    "index 0 is at the owner's left for $seat hand",
+    ({ seat, axis, size }) => {
+      const hand = getHand(seat);
+      const otherAxis = axis === "x" ? "y" : "x";
 
-    if (!eastHand[0] || !westHand[0] || !northHand[0] || !southHand[0]) {
-      throw new Error("Hand(s) not built correctly");
-    }
+      if (!hand[0]) {
+        throw new Error("Hand not built correctly");
+      }
 
-    const eastX = eastHand.map((s) => s.position.x);
-    const westX = westHand.map((s) => s.position.x);
-    const northY = northHand.map((s) => s.position.y);
-    const southY = southHand.map((s) => s.position.y);
+      const positions = hand.map((s) => s.position[axis]);
+      const otherPositions = hand.map((s) => s.position[otherAxis]);
 
-    expect(new Set(eastX).size).toBe(HAND_SIZE);
-    expect(new Set(westX).size).toBe(HAND_SIZE);
-    expect(new Set(northY).size).toBe(HAND_SIZE);
-    expect(new Set(southY).size).toBe(HAND_SIZE);
+      expect(new Set(positions).size).toBe(HAND_SIZE);
+      expect(new Set(otherPositions).size).toBe(1);
 
-    expect(Math.min(...eastX), "East 0 has smallest x").toBe(eastHand[0].position.x);
-    expect(Math.max(...westX), "West 0 has largest x").toBe(westHand[0].position.x);
-    expect(Math.min(...northY), "North 0 has smallest y").toBe(northHand[0].position.y);
-    expect(Math.max(...southY), "South 0 has the largest y").toBe(southHand[0].position.y);
+      const actual =
+        size === "smallest" ? Math.min(...positions) : Math.max(...positions);
+
+      expect(actual, `${seat} 0 has ${size} ${axis}`).toBe(
+        hand[0].position[axis],
+      );
+    },
+  );
+
+  describe("adjacent indices are TILE_WIDTH apart along the hand's axis", () => {
+    it.each([])("", () => {});
   });
 
-  describe.todo("adjacent indices are TILE_WIDTH apart along the hand's axis");
   it.todo("index 12 → 13 is TILE_WIDTH + DRAWN_TILE_GAP apart");
   describe.todo("each hand is centred along its table side");
 });
