@@ -1,10 +1,28 @@
 import { describe, expect, it } from "vitest";
 import { HAND_SIZE, handSlotPosition } from "@/utils/hand.ts";
-import { type Orientation, type Seat } from "@/utils/wall.ts";
+import {
+  type Orientation,
+  orientedRect,
+  type Seat,
+  TABLE_SIZE,
+} from "@/utils/wall.ts";
 import type { Point } from "@/utils/geometry.ts";
 import { DRAWN_TILE_GAP, TILE_WIDTH } from "@/constants.ts";
 
 describe("handSlotPosition", () => {
+  const handSlots = Array.from({ length: HAND_SIZE }, (_, i) => i);
+
+  function getHand(
+    seat: Seat,
+  ): { index: number; position: Point & { orientation: Orientation } }[] {
+    return handSlots.map((index) => {
+      return {
+        index,
+        position: handSlotPosition(seat, index),
+      };
+    });
+  }
+
   it("throws for an index outside 0-13", () => {
     expect(() => handSlotPosition("East", 14)).toThrow("Invalid slot index");
   });
@@ -19,19 +37,6 @@ describe("handSlotPosition", () => {
       expect(handSlotPosition(seat, 1).orientation).toBe(expected);
     });
   });
-
-  const handSlots = Array.from({ length: HAND_SIZE }, (_, i) => i);
-
-  function getHand(
-    seat: Seat,
-  ): { index: number; position: Point & { orientation: Orientation } }[] {
-    return handSlots.map((index) => {
-      return {
-        index,
-        position: handSlotPosition(seat, index),
-      };
-    });
-  }
 
   describe("index 0 is at the owner's left for each hand", () => {
     it.each<{
@@ -149,7 +154,56 @@ describe("handSlotPosition", () => {
     });
   });
 
-  // describe.todo("each hand is centred along its table side");
+  describe("each hand is centred along its table side", () => {
+    const tableCentreLine = TABLE_SIZE / 2;
+    it.each<{
+      seat: Seat;
+      axis: "x" | "y";
+    }>([
+      {
+        seat: "East",
+        axis: "x",
+      },
+      {
+        seat: "West",
+        axis: "x",
+      },
+      {
+        seat: "North",
+        axis: "y",
+      },
+      {
+        seat: "South",
+        axis: "y",
+      },
+    ])("$seat along $axis axis", ({ seat, axis }) => {
+      const handSlot0 = handSlotPosition(seat, 0);
+      const handSlot13 = handSlotPosition(seat, 13);
+
+      const handSlot0Footprint = orientedRect(handSlot0, handSlot0.orientation);
+      const handSlot13Footprint = orientedRect(
+        handSlot13,
+        handSlot13.orientation,
+      );
+
+      let midpoint;
+      if (axis === "x") {
+        midpoint =
+          Math.abs(
+            Math.max(handSlot0Footprint.right, handSlot13Footprint.right) -
+              Math.min(handSlot0Footprint.left, handSlot13Footprint.left),
+          ) / 2;
+      } else {
+        midpoint =
+          Math.abs(
+            Math.max(handSlot0Footprint.bottom, handSlot13Footprint.bottom) -
+              Math.min(handSlot0Footprint.top, handSlot13Footprint.top),
+          ) / 2;
+      }
+
+      expect(midpoint).toBeCloseTo(tableCentreLine);
+    });
+  });
 });
 
 // describe("handZoneRect", () => {
