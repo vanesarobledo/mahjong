@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { HAND_SIZE, handSlotPosition } from "@/utils/hand.ts";
 import { type Orientation, type Seat } from "@/utils/wall.ts";
 import type { Point } from "@/utils/geometry.ts";
+import { TILE_WIDTH } from "@/constants.ts";
 
 describe("handSlotPosition", () => {
   it("throws for an index outside 0-13", () => {
@@ -58,8 +59,9 @@ describe("handSlotPosition", () => {
   ])(
     "index 0 is at the owner's left for $seat hand",
     ({ seat, axis, size }) => {
-      const hand = getHand(seat);
       const otherAxis = axis === "x" ? "y" : "x";
+
+      const hand = getHand(seat);
 
       if (!hand[0]) {
         throw new Error("Hand not built correctly");
@@ -68,6 +70,7 @@ describe("handSlotPosition", () => {
       const positions = hand.map((s) => s.position[axis]);
       const otherPositions = hand.map((s) => s.position[otherAxis]);
 
+      // Guard against empty hand
       expect(new Set(positions).size).toBe(HAND_SIZE);
       expect(new Set(otherPositions).size).toBe(1);
 
@@ -80,8 +83,39 @@ describe("handSlotPosition", () => {
     },
   );
 
-  describe("adjacent indices are TILE_WIDTH apart along the hand's axis", () => {
-    it.each([])("", () => {});
+  describe("adjacent indices from 0-12 are TILE_WIDTH apart along the hand's axis", () => {
+    it.each<{
+      seat: Seat,
+      axis: "x" | "y"
+    }>([
+      {
+        seat: "East",
+        axis: "x",
+      },
+      {
+        seat: "West",
+        axis: "x",
+      },
+      {
+        seat: "North",
+        axis: "y",
+      },
+      {
+        seat: "South",
+        axis: "y",
+      },
+    ])("$seat along $axis axis", ({seat, axis}) => {
+      for (let i = 0; i < 12; i++) {
+        const current = handSlotPosition(seat, i);
+        const next = handSlotPosition(seat, i + 1);
+
+        expect(
+          Math.abs(current[axis] - next[axis]),
+          `slots ${i}->${i + 1}`,
+        ).toBe(TILE_WIDTH);
+      }
+
+    });
   });
 
   it.todo("index 12 → 13 is TILE_WIDTH + DRAWN_TILE_GAP apart");
