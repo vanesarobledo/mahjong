@@ -1,6 +1,6 @@
 import { type Orientation, type Seat, seatOrientation } from "@/utils/wall.ts";
 import type { Point, Rect } from "@/utils/geometry.ts";
-import { TILE_WIDTH } from "@/constants.ts";
+import { DRAWN_TILE_GAP, TILE_WIDTH } from "@/constants.ts";
 
 export const HAND_SIZE = 14;
 export function handSlotPosition(
@@ -33,6 +33,13 @@ export function handSlotPosition(
   if (seat === "North") {
     handX = 0;
     handY = (index - 1) * TILE_WIDTH;
+  }
+
+  if (index === 13) {
+    if (seat === "South") handY -= DRAWN_TILE_GAP;
+    if (seat === "North") handY += DRAWN_TILE_GAP;
+    if (seat === "West") handX -= DRAWN_TILE_GAP;
+    if (seat === "East") handX += DRAWN_TILE_GAP;
   }
 
   return {
