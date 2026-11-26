@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { handSlotPosition } from "@/utils/hand.ts";
+import { HAND_SIZE, handSlotPosition } from "@/utils/hand.ts";
 import { type Orientation, type Seat } from "@/utils/wall.ts";
 import type { Point } from "@/utils/geometry.ts";
-
-const HAND_SIZE = 14;
 
 describe("handSlotPosition", () => {
   it("throws for an index outside 0-13", () => {
@@ -20,7 +18,6 @@ describe("handSlotPosition", () => {
   });
 
   const handSlots = Array.from({ length: HAND_SIZE }, (_, i) => i);
-  const seats: Seat[] = ["East", "West", "North", "South"];
 
   function getHand(
     seat: Seat,
@@ -40,7 +37,7 @@ describe("handSlotPosition", () => {
     const southHand = getHand("South");
 
     if (!eastHand[0] || !westHand[0] || !northHand[0] || !southHand[0]) {
-      throw new Error("Hand not built correctly");
+      throw new Error("Hand(s) not built correctly");
     }
 
     const eastX = eastHand.map((s) => s.position.x);
@@ -53,10 +50,10 @@ describe("handSlotPosition", () => {
     expect(new Set(northY).size).toBe(HAND_SIZE);
     expect(new Set(southY).size).toBe(HAND_SIZE);
 
-    expect(Math.min(...eastX)).toBe(eastHand[0].position.x);
-    expect(Math.max(...westX)).toBe(westHand[0].position.x);
-    expect(Math.min(...northY)).toBe(northHand[0].position.y);
-    expect(Math.max(...southY)).toBe(southHand[0].position.y);
+    expect(Math.min(...eastX), "East 0 has smallest x").toBe(eastHand[0].position.x);
+    expect(Math.max(...westX), "West 0 has largest x").toBe(westHand[0].position.x);
+    expect(Math.min(...northY), "North 0 has smallest y").toBe(northHand[0].position.y);
+    expect(Math.max(...southY), "South 0 has the largest y").toBe(southHand[0].position.y);
   });
 
   describe.todo("adjacent indices are TILE_WIDTH apart along the hand's axis");
