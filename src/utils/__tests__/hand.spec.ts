@@ -189,16 +189,14 @@ describe("handSlotPosition", () => {
       let midpoint;
       if (axis === "x") {
         midpoint =
-          Math.abs(
-            Math.max(handSlot0Footprint.right, handSlot13Footprint.right) -
-              Math.min(handSlot0Footprint.left, handSlot13Footprint.left),
-          ) / 2;
+          (Math.max(handSlot0Footprint.right, handSlot13Footprint.right) +
+            Math.min(handSlot0Footprint.left, handSlot13Footprint.left)) /
+          2;
       } else {
         midpoint =
-          Math.abs(
-            Math.max(handSlot0Footprint.bottom, handSlot13Footprint.bottom) -
-              Math.min(handSlot0Footprint.top, handSlot13Footprint.top),
-          ) / 2;
+          (Math.max(handSlot0Footprint.bottom, handSlot13Footprint.bottom) +
+            Math.min(handSlot0Footprint.top, handSlot13Footprint.top)) /
+          2;
       }
 
       expect(midpoint).toBeCloseTo(tableCentreLine);
