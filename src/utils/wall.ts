@@ -19,7 +19,7 @@ export type Slot = { seat: Seat; stack: number; layer: Layer };
 
 const TOTAL_TILES = 136;
 const WALL_LENGTH = WALL_SIZE * TILE_WIDTH;
-const SIDE_TILE_OFFSET = (TILE_HEIGHT - TILE_WIDTH) / 2;
+export const SIDE_TILE_OFFSET = (TILE_HEIGHT - TILE_WIDTH) / 2;
 export const TABLE_SIZE = 2 * CORNER_GAP + WALL_LENGTH;
 export const MIN_BOARD_HEIGHT = 2 * HAND_MARGIN + TABLE_SIZE;
 
